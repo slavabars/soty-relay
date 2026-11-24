@@ -1,0 +1,47 @@
+# Soty — relay host (dtm_host)
+
+[Русский](README.md) · **English**
+
+[![CI](https://github.com/slavabars/soty-relay/actions/workflows/ci.yml/badge.svg)](https://github.com/slavabars/soty-relay/actions/workflows/ci.yml) [![Nightly](https://github.com/slavabars/soty-relay/actions/workflows/nightly.yml/badge.svg)](https://github.com/slavabars/soty-relay/actions/workflows/nightly.yml) [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
+
+An operator-run Soty node: it accepts encrypted envelopes for offline delivery, hands them to recipients when they reconnect and acts as a peer tracker. Plaintext and device keys never appear on the host.
+
+Install, update and operations are described in the main repository: https://github.com/slavabars/soty#quick-install-on-a-relay-machine
+
+The installers download a ready `dtm_host.bin` from [Releases](https://github.com/slavabars/soty/releases) and **never** overwrite `host.db`.
+
+> **Do not delete `host.db`.** It holds `host_state.ed_seed` — the host's Ed25519 identity — and the client pins. Losing it means `IDENTITY CHANGED` for every pinned client.
+
+## Building from source
+
+`dtm_host` imports the `dtm_app` package (shared envelope and crypto code), so the two repositories must sit side by side:
+
+```text
+workspace/
+  app-src/   # github.com/slavabars/soty-app
+  host/      # this repository
+```
+
+```bash
+export PATH="$HOME/development/flutter/bin:$PATH"
+
+cd host
+flutter pub get
+dart analyze
+flutter test --no-pub
+dart compile exe bin/dtm_host.dart -o build/dtm_host
+```
+
+## Security
+
+- Threat model: [`docs/threat_model.md`](docs/threat_model.md).
+- How to report a vulnerability: [`SECURITY.md`](SECURITY.md) — **not** through a public issue.
+- Limits on connections, subscriptions, frame size and the gossip window are enforced before any allocation.
+
+## Contributing
+
+[`CONTRIBUTING.md`](CONTRIBUTING.md), [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
+
+## License
+
+AGPL-3.0, see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).

@@ -1,0 +1,19 @@
+Soty relay host — dtm_host Copyright (C) 2026 Soty contributors
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+The full licence text is in the LICENSE file next to this NOTICE.
+
+Third-party components
+----------------------
+
+Dependencies are declared in pubspec.yaml / pubspec.lock and keep their own licences. `dtm_host` imports the `dtm_app` package for the shared envelope and crypto code.
+
+Trademark
+---------
+
+The licence covers copyright in the source code. It does not grant the right to use the names "Soty", "Соты" or the project logo in a way that suggests an official or endorsed relay. Only builds published in https://github.com/slavabars/soty/releases are official.

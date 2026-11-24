@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze-test:
+    name: analyze and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      # dtm_host imports package:dtm_app, and pubspec.yaml points at
+      # ../app-src, so both repositories are checked out side by side.
+      - name: Checkout relay
+        uses: actions/checkout@v4
+        with:
+          path: host
+
+      - name: Checkout soty-app
+        uses: actions/checkout@v4
+        with:
+          repository: slavabars/soty-app
+          path: app-src
+
+      - name: Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.32.3"
+          channel: stable
+          cache: true
+
+      - name: Install Linux test dependencies
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
+
+      - name: Dependencies
+        working-directory: host
+        run: flutter pub get
+
+      - name: Analyze
+        working-directory: host
+        run: dart analyze
+
+      - name: Tests
+        working-directory: host
+        run: flutter test --no-pub --reporter expanded
+
+  secret-scan:
+    name: secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependency-review:
+    name: dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high

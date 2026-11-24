@@ -1,0 +1,58 @@
+.dart_tool/
+build/
+.flutter-plugins-dependencies
+pubspec_overrides.yaml
+
+# Runtime state and relay identity — never committed, never published.
+# host.db holds host_state.ed_seed; losing or leaking it breaks every client pin.
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+host.db*
+*.seed
+identity.*
+*.log
+
+# --- Agent traces (never published) ---
+AGENTS.md
+.opencode/
+.agents/
+.claude/
+CLAUDE.md
+.codex/
+.cursor/
+.windsurf/
+.aider*
+.continue/
+opencode.json
+opencode.jsonc
+.mcp.json
+*.prompt.md
+*.agent.md
+
+# --- Development traces (never published) ---
+ROADMAP.md
+PLAN.md
+RESUME_*.md
+TODO*.md
+NOTES*.md
+*.local.md
+
+# --- Secrets (never committed, never published) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# --- Build outputs ---
+dtm_host.app
+dtm_host.app.new
+dtm_host.bin
+bin/dtm_host.exe

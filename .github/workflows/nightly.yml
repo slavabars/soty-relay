@@ -1,0 +1,93 @@
+name: Nightly
+
+# Full suite every night, plus a real binary build so a broken compile is
+# caught without a release. 02:00 UTC = 05:00 MSK.
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: full test suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout relay
+        uses: actions/checkout@v4
+        with:
+          path: host
+
+      - name: Checkout soty-app
+        uses: actions/checkout@v4
+        with:
+          repository: slavabars/soty-app
+          path: app-src
+
+      - name: Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.32.3"
+          channel: stable
+          cache: true
+
+      - name: Install Linux test dependencies
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
+
+      - name: Dependencies
+        working-directory: host
+        run: flutter pub get
+
+      - name: Analyze
+        working-directory: host
+        run: dart analyze
+
+      - name: Tests
+        working-directory: host
+        run: flutter test --no-pub --reporter expanded
+
+  build:
+    name: compile dtm_host
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout relay
+        uses: actions/checkout@v4
+        with:
+          path: host
+
+      - name: Checkout soty-app
+        uses: actions/checkout@v4
+        with:
+          repository: slavabars/soty-app
+          path: app-src
+
+      - name: Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.32.3"
+          channel: stable
+          cache: true
+
+      - name: Dependencies
+        working-directory: host
+        run: flutter pub get
+
+      - name: Compile
+        working-directory: host
+        run: dart compile exe bin/dtm_host.dart -o /tmp/dtm_host
+
+      - name: Smoke test the binary
+        run: |
+          set +e
+          /tmp/dtm_host --help
+          code=$?
+          test "$code" -eq 64

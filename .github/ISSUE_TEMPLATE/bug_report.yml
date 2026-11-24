@@ -1,0 +1,39 @@
+name: Bug report
+description: The relay misbehaves
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not report security problems here.** Use the private advisory link from `SECURITY.md`. Never paste envelope contents or keys.
+  - type: input
+    id: version
+    attributes:
+      label: Relay version
+      description: "hostVersion from /status"
+      placeholder: "1.7.18+36"
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment
+      options:
+        - systemd user unit
+        - shell supervisor / cron
+        - Docker
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Redact addresses, keys and envelope ids before pasting.
+      render: text
