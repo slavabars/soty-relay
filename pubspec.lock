@@ -311,7 +311,7 @@ packages:
       path: "../app-src"
       relative: true
     source: path
-    version: "1.7.18+36"
+    version: "1.7.19+37"
   fake_async:
     dependency: transitive
     description:
