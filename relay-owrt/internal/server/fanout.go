@@ -128,17 +128,21 @@ func (s *Server) refreshUpstream(c *client) {
 	if c.isClosed() || !c.isUpstream() {
 		return
 	}
-	c.send(&wire.Subscribe{Since: 0, Keys: s.localSubscriptionKeys()})
+	keys := s.localSubscriptionKeys()
+	c.setSubscriptions(keys, nowMs())
+	c.send(&wire.Subscribe{Since: 0, Keys: keys})
 }
 
 // refreshAllUpstream pushes the current LAN key set to every seed host. The
 // seed replaces its subscription set, so removals are propagated too.
 func (s *Server) refreshAllUpstream() {
 	keys := s.localSubscriptionKeys()
+	now := nowMs()
 	for _, c := range s.clients() {
 		if c.isClosed() || !c.isUpstream() {
 			continue
 		}
+		c.setSubscriptions(keys, now)
 		c.send(&wire.Subscribe{Since: 0, Keys: keys})
 	}
 }
@@ -159,6 +163,11 @@ func (s *Server) forwardUpstream(env *wire.Envelope, live bool) {
 }
 
 func (s *Server) entitledTo(c *client, env *wire.Envelope) bool {
+	if c.isUpstream() {
+		// The internet seed may only read envelopes for the LAN keys it was
+		// explicitly subscribed to, never the router's whole store.
+		return c.isSubscribed(env.RecipientPubKey)
+	}
 	return c.isFederated() || c.isSubscribed(env.RecipientPubKey)
 }
 

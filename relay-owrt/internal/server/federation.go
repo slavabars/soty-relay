@@ -24,22 +24,21 @@ func (s *Server) mayFederate(c *client, claimed string, announce *string) bool {
 	if !s.cfg.Federation || claimed == "" {
 		return false
 	}
+	// A link we dialed is trusted: the operator seeded it and its key is
+	// pinned, or the network introduced it.
 	if link := c.peerLink(); link != nil {
 		pinned := link.endpoint.EdPubKey
 		return pinned == "" || pinned == claimed
 	}
-	for _, ep := range s.networkMembers() {
-		if ep.EdPubKey == claimed {
-			return true
-		}
+	// Inbound federation is opt-in and needs an address proof. Knowing a
+	// public host key (for example the seed relay's Ed25519) is never enough:
+	// otherwise any client that can reach the socket could claim it and pull
+	// the whole store.
+	if !s.cfg.AllowInboundFederation {
+		return false
 	}
 	if announce == nil || *announce == "" {
 		return false
-	}
-	for _, ep := range s.store.FederatedHosts() {
-		if ep.Addr == *announce && ep.EdPubKey == claimed {
-			return true
-		}
 	}
 	return s.announceMatchesRemote(*announce, c.remote)
 }

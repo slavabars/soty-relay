@@ -117,6 +117,10 @@ With `federation=0` the router opens no outbound connections and serves only its
 - Every number is copied from `app-src/lib/core/security_limits.dart` into `internal/limits`; a divergence shows up in the diff. Frame 256 KiB, 16 subscription keys per connection, 256 gossip items, hop ceiling 3, 64 presence keys, 8192 known peers.
 - Duplicate ids are dropped, the `since` window is clamped to 30 days, and subscriptions and peers have TTLs.
 - `/status` contains no identity, client addresses or envelope metadata.
+- `federation=1` opens **outbound** seed connections only. An inbound client never gets a federated role, even if it claims the seed host's public Ed25519 key: knowing the key is not enough. Inbound federation is off by default.
+- The seed may read only envelopes for the X25519 keys the router subscribed it to (up to 16), never the whole store.
+- Do not forward port 3100 from WAN. On the test Routerich the `wan` zone has `input REJECT`, no 3100 rule/redirect exists, and a connection to the public IP does not establish.
+- If UPnP is enabled on the router, any LAN device can request a port forward; the relay itself does not use UPnP. Disable UPnP if it is not needed.
 
 ## LuCI
 

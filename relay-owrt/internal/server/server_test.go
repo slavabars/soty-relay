@@ -756,9 +756,13 @@ func TestFederationOffGrantsNothing(t *testing.T) {
 }
 
 func TestFederationLinksRelay(t *testing.T) {
-	a := startTestServer(t, func(c *Config) { c.Federation = true })
+	a := startTestServer(t, func(c *Config) {
+		c.Federation = true
+		c.AllowInboundFederation = true
+	})
 	b := startTestServer(t, func(c *Config) {
 		c.Federation = true
+		c.AllowInboundFederation = true
 		c.Seeds = []wire.HostEndpoint{{Addr: a.Announce()}}
 	})
 
@@ -843,6 +847,27 @@ func TestUpstreamBridge(t *testing.T) {
 
 	waitUntil(t, func() bool { return seed.store.SubscriptionCount() >= 1 },
 		3*time.Second, "seed subscription")
+
+	var upstream *client
+	for _, c := range edge.clients() {
+		if c.isUpstream() {
+			upstream = c
+			break
+		}
+	}
+	if upstream == nil {
+		t.Fatal("edge has no upstream link")
+	}
+	waitUntil(t, func() bool { return upstream.isSubscribed(recipient) },
+		3*time.Second, "upstream subscription snapshot")
+	if !edge.entitledTo(upstream,
+		signedEnvelope(t, 22, recipient, nowMs(), "subscribed")) {
+		t.Fatal("upstream cannot read its subscribed key")
+	}
+	if edge.entitledTo(upstream,
+		signedEnvelope(t, 23, strings.Repeat("e", 64), nowMs(), "other")) {
+		t.Fatal("upstream can read an unsubscribed key")
+	}
 
 	publisher := dial(t, seed)
 	publisher.send(&wire.Hello{MyPeerID: "internet-device"})
@@ -932,6 +957,49 @@ func waitUntil(t *testing.T, ok func() bool, timeout time.Duration, what string)
 		time.Sleep(10 * time.Millisecond)
 	}
 	t.Fatalf("timeout: %s", what)
+}
+
+func TestInboundFederationClaimIsRejected(t *testing.T) {
+	seedKey := strings.Repeat("a", 64)
+	seedAddr := "ws://127.0.0.1:1/ws"
+
+	run := func(t *testing.T, allow bool, announce string) {
+		s := startTestServer(t, func(c *Config) {
+			c.Federation = true
+			c.AllowInboundFederation = allow
+			c.Seeds = []wire.HostEndpoint{{Addr: seedAddr, EdPubKey: seedKey}}
+		})
+		recipient := mustKey(t)
+		env := signedEnvelope(t, 30, recipient, nowMs(), "private")
+		if !s.acceptEnvelope(env, "publish", 0) {
+			t.Fatal("setup publish rejected")
+		}
+		c := dial(t, s)
+		c.send(&wire.Hello{
+			MyPeerID:     seedKey,
+			Capabilities: []string{limits.CapHost, limits.CapNet},
+			Announce:     &announce,
+		})
+		c.waitFor(func(m wire.Message) bool {
+			_, ok := m.(*wire.Welcome)
+			return ok
+		}, 2*time.Second)
+		c.send(&wire.Get{IDs: []string{env.ID}})
+		answer := c.waitFor(func(m wire.Message) bool {
+			_, ok := m.(*wire.Envelopes)
+			return ok
+		}, 2*time.Second).(*wire.Envelopes)
+		if len(answer.Envelopes) != 0 {
+			t.Fatalf("inbound client pulled %d envelopes", len(answer.Envelopes))
+		}
+	}
+
+	t.Run("inbound federation off by default", func(t *testing.T) {
+		run(t, false, seedAddr)
+	})
+	t.Run("known key alone is not an address proof", func(t *testing.T) {
+		run(t, true, "ws://203.0.113.9:3100/ws")
+	})
 }
 
 func TestRateLimit(t *testing.T) {

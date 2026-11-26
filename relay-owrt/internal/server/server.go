@@ -39,7 +39,12 @@ type Config struct {
 	// Federation is off by default: a router relay serves its LAN and never
 	// opens an outbound connection unless the operator opts in (T-120).
 	Federation bool
-	Seeds      []wire.HostEndpoint
+	// AllowInboundFederation lets reachable clients act as federated relays.
+	// A LAN router keeps this false: "federation" means the outbound upstream
+	// bridge, never an inbound privileged role. Never enable it on a listener
+	// reachable from the internet without pinned peers.
+	AllowInboundFederation bool
+	Seeds                  []wire.HostEndpoint
 
 	TrackerPeerTTLMs int64
 
@@ -601,7 +606,8 @@ func (s *Server) dispatch(c *client, msg wire.Message) error {
 		})
 		return nil
 	case *wire.Network:
-		if !c.isFederated() || !c.hasCap(limits.CapNet) {
+		if !c.isFederated() || c.isUpstream() ||
+			!c.hasCap(limits.CapNet) {
 			return nil
 		}
 		for _, ep := range m.Hosts {
