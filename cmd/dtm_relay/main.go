@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"log"
@@ -167,8 +168,10 @@ func parseSeed(spec string) (wire.HostEndpoint, error) {
 	if !wire.ValidRelayAddr(addr) {
 		return wire.HostEndpoint{}, fmt.Errorf("invalid seed url %q", addr)
 	}
-	if pk != "" && len(pk) != 64 {
-		return wire.HostEndpoint{}, fmt.Errorf("seed pk must be 32-byte hex")
+	if pk != "" {
+		if raw, err := hex.DecodeString(pk); err != nil || len(raw) != 32 {
+			return wire.HostEndpoint{}, fmt.Errorf("seed pk must be 32-byte hex")
+		}
 	}
 	return wire.HostEndpoint{Addr: addr, EdPubKey: pk}, nil
 }

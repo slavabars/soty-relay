@@ -170,6 +170,9 @@ func (s *Server) sendPresenceTo(c *client) {
 
 // schedulePresence coalesces churn into one feed 400 ms later.
 func (s *Server) schedulePresence() {
+	if s.isStopping() {
+		return
+	}
 	s.presenceMu.Lock()
 	defer s.presenceMu.Unlock()
 	if s.presenceTimer != nil {

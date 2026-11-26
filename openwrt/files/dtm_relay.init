@@ -6,6 +6,20 @@ USE_PROCD=1
 START=95
 STOP=15
 
+# A router usually gets its address by DHCP, so a hard-coded announce URL
+# would go stale. Prefer br-lan, then the source address of the default
+# route, then the UCI LAN address; the last resort is loopback.
+detect_lan_ip() {
+	local ip
+	ip=$(ip -4 -o addr show br-lan 2>/dev/null | \
+		awk '{print $4}' | cut -d/ -f1 | head -n1)
+	[ -n "$ip" ] || ip=$(ip -4 route get 192.0.2.1 2>/dev/null | \
+		awk '{for (i = 1; i <= NF; i++) if ($i == "src") { print $(i + 1); exit }}')
+	[ -n "$ip" ] || ip=$(uci -q get network.lan.ipaddr)
+	[ -n "$ip" ] || ip=127.0.0.1
+	echo "$ip"
+}
+
 start_service() {
 	config_load dtm_relay
 
@@ -24,15 +38,16 @@ start_service() {
 	config_get_bool federation relay federation 0
 	config_get seeds relay seeds ""
 
+	[ -n "$announce" ] || announce="ws://$(detect_lan_ip):$port/ws"
+
 	set -- /usr/bin/dtm_relay \
 		--listen 0.0.0.0 \
 		--port "$port" \
+		--announce "$announce" \
 		--identity "$identity" \
 		--retention-days "$retention" \
 		--max-connections "$maxconn" \
 		--storage "$storage"
-
-	[ -n "$announce" ] && set -- "$@" --announce "$announce"
 	[ "$storage" = "disk" ] && set -- "$@" --path "$path"
 	if [ "$federation" = 1 ]; then
 		set -- "$@" --federation

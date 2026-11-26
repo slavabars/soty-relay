@@ -363,7 +363,7 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		clientDone:   make(chan struct{}),
 	}
 	s.mu.Lock()
-	if s.stopping {
+	if s.stopping || len(s.conns) >= s.cfg.MaxConnections {
 		s.mu.Unlock()
 		_ = ws.Close()
 		return

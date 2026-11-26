@@ -42,9 +42,9 @@ The log and stdout print an invite:
 soty://host?addr=ws%3A%2F%2F192.168.1.1%3A3100%2Fws&pk=<ed25519>
 ```
 
-Send it to a contact or open it on a device. The app adds the relay from the deep link and subscribes to it.
+Send it to a contact or open it on a device. The app adds the relay from the deep link and subscribes to it. When `announce` is empty the init script substitutes the `br-lan` address (falling back to the UCI LAN address); the binary itself defaults to `ws://127.0.0.1:<port>/ws` when run by hand, so pass `--announce` for a LAN.
 
-The port listens on `0.0.0.0` but is meant for the local network. Do not forward `ws://` to the internet: a public relay must sit behind `wss://` (nginx), otherwise the path can be read and rewritten, even though envelope contents stay encrypted.
+The port listens on `0.0.0.0` but is meant for the local network; the OpenWrt `lan` zone accepts input by default, so a firewall rule is only needed after you tighten it. Do not forward `ws://` to the internet: a public relay must sit behind `wss://` (nginx), otherwise the path can be read and rewritten, even though envelope contents stay encrypted.
 
 ## UCI options
 
@@ -52,7 +52,7 @@ The port listens on `0.0.0.0` but is meant for the local network. Do not forward
 | --- | --- | --- |
 | `enabled` | `1` | Start the relay |
 | `port` | `3100` | WebSocket `/ws` port |
-| `announce` | empty | Public `ws://`/`wss://` URL; defaults to `ws://<listen>:<port>/ws` |
+| `announce` | auto | Public `ws://`/`wss://` URL; when empty the init script uses the router LAN address (`ws://<lan-ip>:<port>/ws`) |
 | `identity` | `/etc/dtm-relay/identity` | Ed25519 seed file, mode `0600` |
 | `retention_days` | `30` | How long envelopes for subscribed recipients are kept |
 | `max_connections` | `128` | Simultaneous socket ceiling (hard maximum 512) |

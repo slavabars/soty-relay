@@ -113,6 +113,9 @@ func New(opts Options) (*Store, error) {
 	for _, rec := range records {
 		s.applyRecordLocked(rec)
 	}
+	if len(s.root) > maxRoots {
+		s.root = s.root[len(s.root)-maxRoots:]
+	}
 	s.enforceCapsLocked()
 	s.enforceSubscriptionCapLocked()
 	return s, nil
