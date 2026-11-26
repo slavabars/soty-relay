@@ -22,8 +22,8 @@ PKG_BUILD_DEPENDS:=golang/host
 PKG_BUILD_PARALLEL:=1
 PKG_USE_MIPS16:=0
 
-GO_PKG:=github.com/slavabars/soty-relay-owrt
-GO_PKG_BUILD_PKG:=github.com/slavabars/soty-relay-owrt/cmd/dtm_relay
+GO_PKG:=github.com/slavabars/soty-relay/relay-owrt
+GO_PKG_BUILD_PKG:=github.com/slavabars/soty-relay/relay-owrt/cmd/dtm_relay
 GO_PKG_INSTALL_ALL:=0
 GO_PKG_LDFLAGS:=-s -w
 GO_PKG_LDFLAGS_X:=main.version=$(PKG_VERSION)
