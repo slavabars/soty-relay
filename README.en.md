@@ -59,7 +59,7 @@ The port listens on `0.0.0.0` but is meant for the local network; the OpenWrt `l
 | `storage` | `memory` | `memory` (RAM) or `disk` (journal on USB) |
 | `path` | `/tmp/dtm-relay` | Journal directory for `storage=disk` |
 | `federation` | `0` | Federation with internet relays, off by default |
-| `seeds` | empty | Space-separated seed addresses, each `url` or `url|pk` |
+| `seeds` | empty | Space-separated seed addresses, each `url` or `url\|pk` |
 
 ## Storage and identity
 

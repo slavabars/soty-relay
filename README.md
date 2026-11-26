@@ -59,7 +59,7 @@ soty://host?addr=ws%3A%2F%2F192.168.1.1%3A3100%2Fws&pk=<ed25519>
 | `storage` | `memory` | `memory` (RAM) или `disk` (журнал на USB) |
 | `path` | `/tmp/dtm-relay` | Каталог журнала для `storage=disk` |
 | `federation` | `0` | Федерация с интернет-релеями, по умолчанию выключена |
-| `seeds` | пусто | Seed-адреса через пробел, каждый `url` или `url|pk` |
+| `seeds` | пусто | Seed-адреса через пробел, каждый `url` или `url\|pk` |
 
 ## Хранение и идентичность
 
