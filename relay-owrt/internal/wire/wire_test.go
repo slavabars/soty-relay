@@ -14,14 +14,13 @@ import (
 // Envelope.computeId and Ed25519 signing (host/tool/gen_wire_vector.dart).
 // If these tests fail after a wire change, the relay is no longer compatible
 // with a real client; do not "fix" the fixture.
-func loadVector(t *testing.T) (seed string, env *Envelope) {
+func loadVector(t *testing.T) (env *Envelope) {
 	t.Helper()
 	raw, err := os.ReadFile("testdata/vector.json")
 	if err != nil {
 		t.Fatal(err)
 	}
 	var v struct {
-		Seed     string          `json:"seed"`
 		Envelope json.RawMessage `json:"envelope"`
 	}
 	if err := json.Unmarshal(raw, &v); err != nil {
@@ -31,11 +30,11 @@ func loadVector(t *testing.T) (seed string, env *Envelope) {
 	if err != nil {
 		t.Fatalf("parse vector: %v", err)
 	}
-	return v.Seed, parsed
+	return parsed
 }
 
 func TestEnvelopeVectorMatchesDart(t *testing.T) {
-	_, env := loadVector(t)
+	env := loadVector(t)
 	if !env.Verify() {
 		t.Fatal("Dart-signed envelope did not verify in Go")
 	}
@@ -51,7 +50,7 @@ func TestEnvelopeVectorMatchesDart(t *testing.T) {
 }
 
 func TestEnvelopeTamperingIsRejected(t *testing.T) {
-	_, base := loadVector(t)
+	base := loadVector(t)
 	cases := []struct {
 		name   string
 		mutate func(*Envelope)
@@ -84,7 +83,7 @@ func TestEnvelopeTamperingIsRejected(t *testing.T) {
 }
 
 func TestParseEnvelopeStrictness(t *testing.T) {
-	_, env := loadVector(t)
+	env := loadVector(t)
 	good, _ := json.Marshal(env)
 	var m map[string]any
 	_ = json.Unmarshal(good, &m)
