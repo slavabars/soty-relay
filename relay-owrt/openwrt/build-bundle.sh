@@ -24,6 +24,7 @@ if [ "$NO_BUILD" -eq 0 ]; then
 fi
 
 bundle="dtm_relay-${VERSION}-ipk.tar.gz"
+rm -f "$OUT"/dtm_relay-*-ipk.tar.gz
 stage="$OUT/bundle"
 rm -rf "$stage"
 mkdir -p "$stage"
