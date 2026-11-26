@@ -1,0 +1,42 @@
+**Русский** · [English](README.en.md)
+
+# luci-app-dtm-relay
+
+Веб-панель LuCI для роутер-релея `dtm_relay`: состояние службы, метрики и настройки запуска. Пакет не заменяет `dtm_relay` и не меняет его протокол.
+
+## Что показывает
+
+- **Обзор**: запущена ли служба, автозапуск, версия, uptime; текущие и суммарные соединения, федеративные линки, конверты, пиры, подписки, RSS, load1 и счётчики (принято, ретранслировано, отклонено, дубликаты, backfill, live).
+- **Действия**: `Start`, `Stop`, `Restart`, переход в настройки. Автообновление метрик раз в 5 секунд.
+- **Настройки**: `enabled`, `port`, `announce`, `retention_days`, `max_connections`, `storage`, `path`, `federation`, `seeds`. Файл идентичности показывается только как путь и не редактируется.
+
+## Установка
+
+Пакет ставится рядом с релеем:
+
+```sh
+opkg install dtm_relay_<version>-1_<arch>.ipk
+opkg install luci-app-dtm-relay_<version>-1_all.ipk
+```
+
+Оба пакета входят в релизный bundle `dtm_relay-X.Y.Z+N-ipk.tar.gz`. После установки откройте LuCI → **Services → Soty relay**.
+
+## Метрики
+
+Страница вызывает фиксированный helper `/usr/libexec/dtm-relay-status`, который читает порт из UCI и запрашивает локальный `http://127.0.0.1:<port>/status`. Браузер не обращается к порту релея напрямую, а helper не читает seed и не принимает аргументы.
+
+## Безопасность
+
+- ACL разрешает только `uci dtm_relay`, `luci.getInitList`/`setInitAction` и запуск helper.
+- Содержимое `/etc/dtm-relay/identity` не читается и не отображается.
+- Федерация по умолчанию выключена; при включении появляется предупреждение об исходящих соединениях.
+- Перед изменением настроек сделайте бекап роутера; ключ идентичности нельзя удалять.
+
+## Сборка
+
+```sh
+cd host/relay-owrt
+VERSION=X.Y.Z+N ./openwrt/build-luci-ipk.sh
+```
+
+Результат — `dist/luci-app-dtm-relay_<version>-1_all.ipk`. Для OpenWrt buildroot используйте `Makefile` этого каталога в LuCI feed.

@@ -1,0 +1,203 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: luci-app-dtm-relay\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: ru\n"
+
+msgid "Soty relay"
+msgstr "Релей Soty"
+
+msgid "LAN relay and tracker for Soty."
+msgstr "LAN-релей и трекер Soty."
+
+msgid "Service"
+msgstr "Служба"
+
+msgid "State"
+msgstr "Состояние"
+
+msgid "Running"
+msgstr "Работает"
+
+msgid "Stopped"
+msgstr "Остановлен"
+
+msgid "Autostart"
+msgstr "Автозапуск"
+
+msgid "Enabled"
+msgstr "Включён"
+
+msgid "Disabled"
+msgstr "Выключен"
+
+msgid "Version"
+msgstr "Версия"
+
+msgid "Uptime"
+msgstr "Время работы"
+
+msgid "Connections"
+msgstr "Соединения"
+
+msgid "Now"
+msgstr "Сейчас"
+
+msgid "Total"
+msgstr "Всего"
+
+msgid "Federation links"
+msgstr "Федеративные линки"
+
+msgid "Queue"
+msgstr "Очередь"
+
+msgid "Envelopes"
+msgstr "Конверты"
+
+msgid "Peers"
+msgstr "Пиры"
+
+msgid "Subscriptions"
+msgstr "Подписки"
+
+msgid "Process"
+msgstr "Процесс"
+
+msgid "Memory"
+msgstr "Память"
+
+msgid "Counters"
+msgstr "Счётчики"
+
+msgid "Received"
+msgstr "Принято"
+
+msgid "Relayed"
+msgstr "Ретранслировано"
+
+msgid "Rejected"
+msgstr "Отклонено"
+
+msgid "Duplicates"
+msgstr "Дубликаты"
+
+msgid "Backfill"
+msgstr "Backfill"
+
+msgid "Live"
+msgstr "Live"
+
+msgid "Start"
+msgstr "Запустить"
+
+msgid "Stop"
+msgstr "Остановить"
+
+msgid "Restart"
+msgstr "Перезапустить"
+
+msgid "Settings"
+msgstr "Настройки"
+
+msgid "Start the relay to see metrics."
+msgstr "Запустите релей, чтобы увидеть метрики."
+
+msgid "Service action completed: %s"
+msgstr "Действие выполнено: %s"
+
+msgid "Service action failed: %s"
+msgstr "Не удалось выполнить действие: %s"
+
+msgid "Command failed"
+msgstr "Команда завершилась с ошибкой"
+
+msgid "Relay settings"
+msgstr "Настройки релея"
+
+msgid "Important"
+msgstr "Важно"
+
+msgid "Back up the router before changing settings. The Ed25519 identity file is pinned by clients: never delete or replace it."
+msgstr "Перед изменением настроек сделайте бекап роутера. Ed25519-файл идентичности пиннится клиентами: не удаляйте и не заменяйте его."
+
+msgid "Start the relay automatically when the router boots."
+msgstr "Запускать релей автоматически при загрузке роутера."
+
+msgid "Listen port"
+msgstr "Порт"
+
+msgid "WebSocket port for the protocol endpoint /ws on the LAN."
+msgstr "Порт WebSocket для /ws в локальной сети."
+
+msgid "Announce URL"
+msgstr "Announce URL"
+
+msgid "Public ws:// or wss:// URL advertised to clients. Leave empty to use the router LAN address."
+msgstr "Публичный ws:// или wss:// URL для клиентов. Пусто — использовать LAN-адрес роутера."
+
+msgid "auto"
+msgstr "авто"
+
+msgid "Expected a ws:// or wss:// URL"
+msgstr "Ожидается ws:// или wss:// URL"
+
+msgid "Identity file"
+msgstr "Файл идентичности"
+
+msgid "Read-only. Changing or deleting this Ed25519 seed creates a new relay identity and breaks every client that pinned this relay."
+msgstr "Только чтение. Изменение или удаление Ed25519-seed создаёт новую идентичность и ломает всех клиентов, которые пиннят этот релей."
+
+msgid "Retention, days"
+msgstr "Хранение, дней"
+
+msgid "How long envelopes for subscribed recipients are kept."
+msgstr "Сколько хранить конверты для подписанных получателей."
+
+msgid "Max connections"
+msgstr "Максимум соединений"
+
+msgid "Simultaneous WebSocket connections. The hard ceiling is 512."
+msgstr "Одновременные WebSocket-соединения. Жёсткий предел — 512."
+
+msgid "Storage"
+msgstr "Хранилище"
+
+msgid "RAM is recommended: router flash wears out and the queue survives a reconnect, not a reboot."
+msgstr "Рекомендуется RAM: флеш роутера изнашивается, а очередь переживает переподключение, но не перезагрузку."
+
+msgid "RAM (recommended)"
+msgstr "RAM (рекомендуется)"
+
+msgid "Disk (journal on USB)"
+msgstr "Диск (журнал на USB)"
+
+msgid "Journal directory"
+msgstr "Каталог журнала"
+
+msgid "Only for disk storage. Use a USB mount, for example /mnt/sda1/dtm-relay."
+msgstr "Только для диск-хранилища. Используйте USB-монтаж, например /mnt/sda1/dtm-relay."
+
+msgid "Expected an absolute path"
+msgstr "Ожидается абсолютный путь"
+
+msgid "Federation"
+msgstr "Федерация"
+
+msgid "Allow outbound connections to seeded internet relays. Off by default; a LAN relay needs no federation."
+msgstr "Разрешить исходящие соединения с интернет-релеями. По умолчанию выключено; LAN-релею федерация не нужна."
+
+msgid "Federation seeds"
+msgstr "Seed-адреса федерации"
+
+msgid "Space-separated ws:// or wss:// URLs, optionally pinned with url|ed25519."
+msgstr "ws:// или wss:// URL через пробел, опционально с пином url|ed25519."
+
+msgid "Invalid seed: %s"
+msgstr "Неверный seed: %s"
+
+msgid "Settings saved; the relay was restarted."
+msgstr "Настройки сохранены; релей перезапущен."
+
+msgid "Settings saved, but the relay did not restart: %s"
+msgstr "Настройки сохранены, но релей не перезапустился: %s"

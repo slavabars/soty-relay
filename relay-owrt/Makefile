@@ -2,7 +2,7 @@ VERSION ?= 0.1.0
 GO ?= go
 DIST ?= dist
 
-.PHONY: all build test vet ipk bundle clean
+.PHONY: all build test vet ipk luci bundle clean
 
 all: vet test build
 
@@ -18,6 +18,9 @@ vet:
 
 ipk:
 	VERSION=$(VERSION) ./openwrt/build-ipk.sh all
+
+luci:
+	VERSION=$(VERSION) ./openwrt/build-luci-ipk.sh
 
 bundle:
 	VERSION=$(VERSION) ./openwrt/build-bundle.sh

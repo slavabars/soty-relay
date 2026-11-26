@@ -46,6 +46,8 @@ cd ../.. && scripts/verify_owrt_bundle.sh build-artifacts/dtm_relay-X.Y.Z+N-ipk.
 - An `.ipk` for OpenWrt 24.10+ is a gzip-tar, not an `ar` archive.
 - A live-router test starts with a verified backup (`sysupgrade -b`, overlay, `/etc`, packages) and ends with a rollback to the original `uci export`/`opkg list-installed`.
 
+- The LuCI package (`luci-app-dtm-relay`) never reads `/etc/dtm-relay/identity` or displays the seed; its ACL grants only `uci dtm_relay`, `luci.setInitAction` and the status helper.
+
 ## Rules
 
 - **Test first**, including hostile paths: oversize frames, bad signatures, replayed envelopes, impersonated federation peers, subscription floods.

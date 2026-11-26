@@ -1,0 +1,37 @@
+{
+	"admin/services/dtm_relay": {
+		"title": "Soty relay",
+		"order": 60,
+		"action": {
+			"type": "view",
+			"path": "dtm_relay/overview"
+		},
+		"depends": {
+			"acl": [
+				"luci-app-dtm-relay"
+			],
+			"fs": {
+				"/usr/libexec/dtm-relay-status": "executable"
+			},
+			"uci": {
+				"dtm_relay": true
+			}
+		}
+	},
+	"admin/services/dtm_relay/settings": {
+		"title": "Settings",
+		"order": 10,
+		"action": {
+			"type": "view",
+			"path": "dtm_relay/settings"
+		},
+		"depends": {
+			"acl": [
+				"luci-app-dtm-relay"
+			],
+			"uci": {
+				"dtm_relay": true
+			}
+		}
+	}
+}

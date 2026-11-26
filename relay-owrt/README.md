@@ -20,8 +20,11 @@ make test          # go test ./...
 make               # vet + test + локальный бинарь в dist/
 make ipk           # .ipk для mipsel_24kc, mips_24kc, aarch64, armv7, x86_64
 
-# релизный bundle: пять .ipk + SHA256SUMS + README.txt
+# релизный bundle: 5 архитектур + LuCI + SHA256SUMS + README.txt
 VERSION=X.Y.Z+N ./openwrt/build-bundle.sh
+
+# только LuCI-панель
+VERSION=X.Y.Z+N ./openwrt/build-luci-ipk.sh
 ```
 
 Один пакет: `openwrt/build-ipk.sh mipsel_24kc` → `dist/dtm_relay_<version>-1_<arch>.ipk`. Зависимостей у пакета нет: бинарь статический. Формат `.ipk` — gzip-tar (`debian-binary`, `control.tar.gz`, `data.tar.gz`), как его читает opkg в OpenWrt 24.10+; на более старых релизах используйте buildroot-пакет (там формат собирает сама OpenWrt).
@@ -34,6 +37,7 @@ VERSION=X.Y.Z+N ./openwrt/build-bundle.sh
 tar -xzf dtm_relay-X.Y.Z+N-ipk.tar.gz
 sha256sum -c SHA256SUMS
 opkg install dtm_relay_X.Y.Z+N-1_mipsel_24kc.ipk
+opkg install luci-app-dtm-relay_X.Y.Z+N-1_all.ipk
 uci set dtm_relay.relay.enabled='1'
 uci set dtm_relay.relay.port='3100'
 uci commit dtm_relay
@@ -107,6 +111,10 @@ uci commit dtm_relay
 - Все числа скопированы из `app-src/lib/core/security_limits.dart` в `internal/limits`; расхождение видно в диффе. Кадр — 256 КиБ, ключей подписки — 16 на соединение, элементов gossip — 256, hop ceiling — 3, presence — 64 ключа, известных пиров — 8192.
 - Дубликаты по id отбрасываются, окно `since` подрезается 30 днями, подписки и пиры имеют TTL.
 - В `/status` нет идентичности, адресов клиентов и метаданных конвертов.
+
+## LuCI
+
+Пакет `luci-app-dtm-relay` добавляет в LuCI страницу **Services → Soty relay**: состояние службы, метрики, `Start`/`Stop`/`Restart` и форму UCI. Метрики берутся из локального `/status` через helper `/usr/libexec/dtm-relay-status`; seed не читается. Пакет noarch, ставится рядом с релеем и не требует изменения протокола. Подробности — в [`luci-app-dtm-relay/README.md`](luci-app-dtm-relay/README.md).
 
 ## Проверка
 

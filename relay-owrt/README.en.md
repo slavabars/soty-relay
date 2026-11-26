@@ -20,8 +20,11 @@ make test          # go test ./...
 make               # vet + test + local binary in dist/
 make ipk           # .ipk for mipsel_24kc, mips_24kc, aarch64, armv7, x86_64
 
-# release bundle: five .ipk files + SHA256SUMS + README.txt
+# release bundle: 5 architectures + LuCI + SHA256SUMS + README.txt
 VERSION=X.Y.Z+N ./openwrt/build-bundle.sh
+
+# LuCI panel only
+VERSION=X.Y.Z+N ./openwrt/build-luci-ipk.sh
 ```
 
 One package: `openwrt/build-ipk.sh mipsel_24kc` → `dist/dtm_relay_<version>-1_<arch>.ipk`. The package has no dependencies: the binary is static. The `.ipk` is a gzip-compressed tar (`debian-binary`, `control.tar.gz`, `data.tar.gz`), the format opkg reads on OpenWrt 24.10+; older releases should use the buildroot package, which lets OpenWrt produce its own format.
@@ -34,6 +37,7 @@ One package: `openwrt/build-ipk.sh mipsel_24kc` → `dist/dtm_relay_<version>-1_
 tar -xzf dtm_relay-X.Y.Z+N-ipk.tar.gz
 sha256sum -c SHA256SUMS
 opkg install dtm_relay_X.Y.Z+N-1_mipsel_24kc.ipk
+opkg install luci-app-dtm-relay_X.Y.Z+N-1_all.ipk
 uci set dtm_relay.relay.enabled='1'
 uci set dtm_relay.relay.port='3100'
 uci commit dtm_relay
@@ -107,6 +111,10 @@ With `federation=0` any `dtm-host` claim in HELLO stays an ordinary client: othe
 - Every number is copied from `app-src/lib/core/security_limits.dart` into `internal/limits`; a divergence shows up in the diff. Frame 256 KiB, 16 subscription keys per connection, 256 gossip items, hop ceiling 3, 64 presence keys, 8192 known peers.
 - Duplicate ids are dropped, the `since` window is clamped to 30 days, and subscriptions and peers have TTLs.
 - `/status` contains no identity, client addresses or envelope metadata.
+
+## LuCI
+
+The `luci-app-dtm-relay` package adds **Services → Soty relay** to LuCI: service state, metrics, `Start`/`Stop`/`Restart` and a UCI form. Metrics come from the local `/status` through `/usr/libexec/dtm-relay-status`; the seed is never read. The package is noarch, installs next to the relay and does not change the protocol. See [`luci-app-dtm-relay/README.en.md`](luci-app-dtm-relay/README.en.md).
 
 ## Verification
 

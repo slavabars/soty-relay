@@ -39,14 +39,23 @@ for arch in $(arches); do
 	cp "$ipk" "$stage/"
 	count=$((count + 1))
 done
-if [ "$count" -ne 5 ]; then
-	echo "expected 5 architectures, bundled $count" >&2
+VERSION="$VERSION" "$ROOT/openwrt/build-luci-ipk.sh"
+luci="$OUT/luci-app-dtm-relay_${VERSION}-1_all.ipk"
+if [ ! -f "$luci" ]; then
+	echo "missing LuCI package: $luci" >&2
+	exit 1
+fi
+cp "$luci" "$stage/"
+count=$((count + 1))
+
+if [ "$count" -ne 6 ]; then
+	echo "expected 6 packages (5 architectures + LuCI), bundled $count" >&2
 	exit 1
 fi
 
 (
 	cd "$stage"
-	sha256sum dtm_relay_*.ipk > SHA256SUMS
+	sha256sum dtm_relay_*.ipk luci-app-*.ipk > SHA256SUMS
 )
 
 cat > "$stage/README.txt" <<EOF
@@ -64,8 +73,12 @@ Unpack and verify:
   tar -xzf dtm_relay-$VERSION-ipk.tar.gz
   sha256sum -c SHA256SUMS
 
-Install the package for your architecture, for example:
+Install the relay package for your architecture and the LuCI panel:
   opkg install dtm_relay_${VERSION}-1_aarch64_cortex-a53.ipk
+  opkg install luci-app-dtm-relay_${VERSION}-1_all.ipk
+
+The LuCI panel then lives under Services -> Soty relay. It shows the
+service state and metrics and edits /etc/config/dtm_relay.
 
 Enable and start:
   uci set dtm_relay.relay.enabled='1'
@@ -97,9 +110,9 @@ tar -xzf "$OUT/$bundle" -C "$check"
 	cd "$check"
 	sha256sum -c SHA256SUMS >/dev/null
 )
-files="$(find "$check" -maxdepth 1 -name 'dtm_relay_*.ipk' | wc -l)"
-[ "$files" -eq 5 ] || {
-	echo "bundle has $files packages, expected 5" >&2
+files="$(find "$check" -maxdepth 1 -name '*.ipk' | wc -l)"
+[ "$files" -eq 6 ] || {
+	echo "bundle has $files packages, expected 6" >&2
 	exit 1
 }
 

@@ -1,0 +1,17 @@
+{
+	"luci-app-dtm-relay": {
+		"description": "Grant access to the Soty router relay service and settings",
+		"read": {
+			"uci": [ "dtm_relay" ],
+			"ubus": {
+				"luci": [ "setInitAction" ]
+			},
+			"file": {
+				"/usr/libexec/dtm-relay-status": [ "exec" ]
+			}
+		},
+		"write": {
+			"uci": [ "dtm_relay" ]
+		}
+	}
+}

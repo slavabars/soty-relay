@@ -1,0 +1,24 @@
+#!/bin/sh
+# Print the dtm_relay operational status as JSON.
+#
+# The LuCI page calls this fixed helper through rpcd, so the browser never
+# needs HTTP access to the relay port and the command line is not built from
+# untrusted input. The helper never reads the identity seed.
+
+port="$(uci -q get dtm_relay.relay.port 2>/dev/null || true)"
+[ -n "$port" ] || port="$(uci -q get 'dtm_relay.@relay[0].port' 2>/dev/null || true)"
+case "$port" in
+	''|*[!0-9]*) port=3100 ;;
+esac
+if [ "$port" -lt 1 ] || [ "$port" -gt 65535 ]; then
+	port=3100
+fi
+
+out="$(/bin/uclient-fetch -Y off -q -T 3 -O - \
+	"http://127.0.0.1:$port/status" 2>/dev/null)" || {
+	printf '{"running":false}\n'
+	exit 0
+}
+
+[ -n "$out" ] || out='{"running":false}'
+printf '%s\n' "$out"

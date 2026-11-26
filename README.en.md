@@ -40,9 +40,10 @@ dart compile exe bin/dtm_host.dart -o build/dtm_host
 cd relay-owrt
 go test ./...
 VERSION=1.7.20+38 ./openwrt/build-bundle.sh
+VERSION=1.7.20+38 ./openwrt/build-luci-ipk.sh   # LuCI panel only
 ```
 
-`dist/dtm_relay-<version>-ipk.tar.gz` contains five `.ipk` files, `SHA256SUMS` and `README.txt`. Install, UCI and limits are in [`relay-owrt/README.en.md`](relay-owrt/README.en.md); Soty releases publish this bundle as `dtm_relay-X.Y.Z+N-ipk.tar.gz`.
+`dist/dtm_relay-<version>-ipk.tar.gz` contains five architecture packages, the noarch `luci-app-dtm-relay` package, `SHA256SUMS` and `README.txt`. Install, UCI and limits are in [`relay-owrt/README.en.md`](relay-owrt/README.en.md); Soty releases publish this bundle as `dtm_relay-X.Y.Z+N-ipk.tar.gz`.
 
 ## Security
 
