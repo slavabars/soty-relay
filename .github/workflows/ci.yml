@@ -22,12 +22,12 @@ jobs:
       # dtm_host imports package:dtm_app, and pubspec.yaml points at
       # ../app-src, so both repositories are checked out side by side.
       - name: Checkout relay
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: host
 
       - name: Checkout soty-app
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: slavabars/soty-app
           path: app-src
@@ -60,7 +60,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout relay
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: host
 
@@ -88,7 +88,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout full history
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -103,7 +103,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: high
