@@ -32,6 +32,10 @@ The page calls the fixed helper `/usr/libexec/dtm-relay-status`, which reads the
 - Federation is off by default; enabling it shows an outbound-connection warning.
 - Back up the router before changing settings; never delete the identity key.
 
+## Locales
+
+The `po/<lang>` catalogs are compiled to `.lmo` at package build time and installed under `/usr/lib/lua/luci/i18n`. Currently `ru`, `de`, `zh-cn`, `es` and `fr` are shipped; other LuCI languages fall back to the English source. The Russian catalog covers every panel and menu string.
+
 ## Build
 
 ```sh
