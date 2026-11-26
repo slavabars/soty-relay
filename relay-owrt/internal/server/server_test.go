@@ -813,6 +813,127 @@ func TestFederationLinksRelay(t *testing.T) {
 	}, 4*time.Second)
 }
 
+func TestUpstreamBridge(t *testing.T) {
+	seed := startTestServer(t, func(c *Config) {
+		c.Federation = false
+	})
+	edge := startTestServer(t, func(c *Config) {
+		c.Federation = true
+		c.Seeds = []wire.HostEndpoint{{Addr: seed.Announce()}}
+		// A router behind NAT: the internet host cannot dial this address and
+		// must not grant the router a federated role. The bridge is a client.
+		c.Announce = "ws://192.168.1.1:3100/ws"
+	})
+
+	waitUntil(t, func() bool { return edge.linkCount() > 0 },
+		3*time.Second, "edge link")
+
+	recipient := mustKey(t)
+	local := dial(t, edge)
+	local.send(&wire.Hello{MyPeerID: "lan-device"})
+	local.waitFor(func(m wire.Message) bool {
+		_, ok := m.(*wire.Welcome)
+		return ok
+	}, 2*time.Second)
+	local.send(&wire.Subscribe{Since: 0, Keys: []string{recipient}})
+	local.waitFor(func(m wire.Message) bool {
+		e, ok := m.(*wire.Envelopes)
+		return ok && e.Done
+	}, 2*time.Second)
+
+	waitUntil(t, func() bool { return seed.store.SubscriptionCount() >= 1 },
+		3*time.Second, "seed subscription")
+
+	publisher := dial(t, seed)
+	publisher.send(&wire.Hello{MyPeerID: "internet-device"})
+	publisher.waitFor(func(m wire.Message) bool {
+		_, ok := m.(*wire.Welcome)
+		return ok
+	}, 2*time.Second)
+	inbound := signedEnvelope(t, 20, recipient, nowMs(), "from the internet")
+	publisher.send(&wire.Publish{Envelope: inbound})
+	ack := publisher.waitFor(func(m wire.Message) bool {
+		p, ok := m.(*wire.Published)
+		return ok && p.ID == inbound.ID
+	}, 2*time.Second).(*wire.Published)
+	if !ack.Accepted {
+		t.Fatal("seed rejected the external publish")
+	}
+	local.waitFor(func(m wire.Message) bool {
+		e, ok := m.(*wire.Envelopes)
+		if !ok {
+			return false
+		}
+		for _, got := range e.Envelopes {
+			if got.ID == inbound.ID {
+				return true
+			}
+		}
+		return false
+	}, 3*time.Second)
+	if edge.store.EnvelopeCount() != 1 {
+		t.Fatalf("edge store=%d", edge.store.EnvelopeCount())
+	}
+
+	// LAN -> internet: the edge must publish to the seed, and the seed must
+	// fan out to its own subscriber.
+	externalKey := strings.Repeat("f", 64)
+	external := dial(t, seed)
+	external.send(&wire.Hello{MyPeerID: "internet-recipient"})
+	external.waitFor(func(m wire.Message) bool {
+		_, ok := m.(*wire.Welcome)
+		return ok
+	}, 2*time.Second)
+	external.send(&wire.Subscribe{Since: 0, Keys: []string{externalKey}})
+	external.waitFor(func(m wire.Message) bool {
+		e, ok := m.(*wire.Envelopes)
+		return ok && e.Done
+	}, 2*time.Second)
+
+	lanPublisher := dial(t, edge)
+	lanPublisher.send(&wire.Hello{MyPeerID: "lan-publisher"})
+	lanPublisher.waitFor(func(m wire.Message) bool {
+		_, ok := m.(*wire.Welcome)
+		return ok
+	}, 2*time.Second)
+	outbound := signedEnvelope(t, 21, externalKey, nowMs(), "from the LAN")
+	lanPublisher.send(&wire.Publish{Envelope: outbound})
+	outAck := lanPublisher.waitFor(func(m wire.Message) bool {
+		p, ok := m.(*wire.Published)
+		return ok && p.ID == outbound.ID
+	}, 2*time.Second).(*wire.Published)
+	if !outAck.Accepted {
+		t.Fatal("edge rejected the LAN publish")
+	}
+	external.waitFor(func(m wire.Message) bool {
+		e, ok := m.(*wire.Envelopes)
+		if !ok {
+			return false
+		}
+		for _, got := range e.Envelopes {
+			if got.ID == outbound.ID {
+				return true
+			}
+		}
+		return false
+	}, 3*time.Second)
+	if edge.store.EnvelopeCount() != 2 {
+		t.Fatalf("edge store=%d", edge.store.EnvelopeCount())
+	}
+}
+
+func waitUntil(t *testing.T, ok func() bool, timeout time.Duration, what string) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if ok() {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("timeout: %s", what)
+}
+
 func TestRateLimit(t *testing.T) {
 	s := startTestServer(t, func(c *Config) {
 		c.RateLimitPerWindow = 2

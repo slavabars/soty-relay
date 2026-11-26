@@ -48,7 +48,7 @@ func (s *Server) acceptEnvelope(env *wire.Envelope, source string, hops int) boo
 // fanOut delivers a stored envelope to subscribers and to federated peers.
 func (s *Server) fanOut(env *wire.Envelope, hops int, except *client) {
 	for _, c := range s.clients() {
-		if c == except || c.isClosed() {
+		if c == except || c.isClosed() || c.isUpstream() {
 			continue
 		}
 		if c.isFederated() {
@@ -79,7 +79,8 @@ func (s *Server) fanOut(env *wire.Envelope, hops int, except *client) {
 func (s *Server) fanOutLive(env *wire.Envelope, except *client) int {
 	forwarded := 0
 	for _, c := range s.clients() {
-		if c == except || c.isClosed() || c.isFederated() {
+		if c == except || c.isClosed() || c.isFederated() ||
+			c.isUpstream() {
 			continue
 		}
 		if !c.isSubscribed(env.RecipientPubKey) {
@@ -94,6 +95,67 @@ func (s *Server) fanOutLive(env *wire.Envelope, except *client) int {
 		forwarded++
 	}
 	return forwarded
+}
+
+// localSubscriptionKeys is the union of X25519 keys subscribed by devices on
+// this LAN. The seed host is subscribed to this set so a NATed router can
+// receive messages addressed to its devices.
+func (s *Server) localSubscriptionKeys() []string {
+	set := make(map[string]struct{})
+	for _, c := range s.clients() {
+		if c.isClosed() || c.isUpstream() || c.isFederated() {
+			continue
+		}
+		keys, _ := c.subscriptionSnapshot()
+		for _, k := range keys {
+			set[k] = struct{}{}
+		}
+	}
+	keys := make([]string, 0, len(set))
+	for k := range set {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	if len(keys) > limits.MaxHostSubscriptionKeys {
+		s.logf("upstream: %d LAN keys, bridging first %d",
+			len(keys), limits.MaxHostSubscriptionKeys)
+		keys = keys[:limits.MaxHostSubscriptionKeys]
+	}
+	return keys
+}
+
+func (s *Server) refreshUpstream(c *client) {
+	if c.isClosed() || !c.isUpstream() {
+		return
+	}
+	c.send(&wire.Subscribe{Since: 0, Keys: s.localSubscriptionKeys()})
+}
+
+// refreshAllUpstream pushes the current LAN key set to every seed host. The
+// seed replaces its subscription set, so removals are propagated too.
+func (s *Server) refreshAllUpstream() {
+	keys := s.localSubscriptionKeys()
+	for _, c := range s.clients() {
+		if c.isClosed() || !c.isUpstream() {
+			continue
+		}
+		c.send(&wire.Subscribe{Since: 0, Keys: keys})
+	}
+}
+
+// forwardUpstream publishes a LAN-originated envelope to seed relays. Stored
+// envelopes use PUBLISH; live slices use PUBLISH_LIVE and stay unstored.
+func (s *Server) forwardUpstream(env *wire.Envelope, live bool) {
+	for _, c := range s.clients() {
+		if c.isClosed() || !c.isUpstream() {
+			continue
+		}
+		if live {
+			c.send(&wire.PublishLive{Envelope: env})
+		} else {
+			c.send(&wire.Publish{Envelope: env})
+		}
+	}
 }
 
 func (s *Server) entitledTo(c *client, env *wire.Envelope) bool {

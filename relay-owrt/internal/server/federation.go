@@ -199,6 +199,7 @@ func (l *peerLink) connectOnce() {
 		clientDone:   make(chan struct{}),
 	}
 	c.setFederated(true)
+	c.setUpstream(true)
 	c.setPeerLink(l)
 	l.mu.Lock()
 	l.ws = ws
@@ -249,7 +250,7 @@ func (s *Server) federationSync() {
 			continue
 		}
 		c.send(&wire.Want{Since: cursor})
-		if c.hasCap(limits.CapNet) {
+		if !c.isUpstream() && c.hasCap(limits.CapNet) {
 			c.send(&wire.Network{Hosts: network})
 		}
 	}

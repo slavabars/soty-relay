@@ -67,7 +67,7 @@ The port listens on `0.0.0.0` but is meant for the local network; the OpenWrt `l
 | `max_connections` | `128` | Simultaneous socket ceiling (hard maximum 512) |
 | `storage` | `memory` | `memory` (RAM) or `disk` (journal on USB) |
 | `path` | `/tmp/dtm-relay` | Journal directory for `storage=disk` |
-| `federation` | `0` | Federation with internet relays, off by default |
+| `federation` | `0` | Upstream bridge to seed relays, off by default |
 | `seeds` | empty | Space-separated seed addresses, each `url` or `url\|pk` |
 
 ## Storage and identity
@@ -93,7 +93,13 @@ uci commit dtm_relay
 /etc/init.d/dtm_relay restart
 ```
 
-With `federation=0` any `dtm-host` claim in HELLO stays an ordinary client: other devices' envelopes are never forwarded to it. With `federation=1` the same rules as `dtm_host` apply: the relay role is granted, not claimed, a seeded key is pinned, and anti-entropy runs over `WANT`/`HAVE`/`GET`/`ENVELOPES` and `NETWORK`.
+A router behind NAT cannot be accepted by an internet host as a federated relay: `dtm_host` verifies that `announce` resolves to the socket address, while the router announces a LAN address. `dtm_relay` therefore works as an **upstream client** of the seed host:
+
+- it subscribes the seed to the X25519 keys of its LAN devices (up to 16 keys) with `SUBSCRIBE`;
+- it receives envelopes and live slices for those keys from the seed and delivers them to local subscribers;
+- it publishes LAN-originated messages upstream with `PUBLISH`/`PUBLISH_LIVE`, so they reach internet devices.
+
+With `federation=0` the router opens no outbound connections and serves only its LAN. With `federation=1` and a seed, the bridge is active; the router needs no public address or port. Pin the seed: `wss://soty.su/soty-ws|<ed25519>`. Limit: 16 LAN keys per seed; more devices need a second seed or a future protocol extension.
 
 ## Endpoints
 

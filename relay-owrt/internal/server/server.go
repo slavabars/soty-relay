@@ -391,6 +391,9 @@ func (s *Server) removeClient(c *client) {
 	if link := c.peerLink(); link != nil {
 		link.wsGone()
 	}
+	if !c.isUpstream() && !s.isStopping() {
+		s.refreshAllUpstream()
+	}
 	s.schedulePresence()
 }
 
@@ -495,11 +498,17 @@ func (s *Server) dispatch(c *client, msg wire.Message) error {
 		c.setSubscriptions(keys, now)
 		s.schedulePresence()
 		s.sendBackfill(c, since)
+		if !c.isUpstream() {
+			s.refreshAllUpstream()
+		}
 		return nil
 	case *wire.Publish:
 		accepted := s.acceptEnvelope(m.Envelope, "publish", 0)
 		if accepted {
 			s.fanOut(m.Envelope, 0, c)
+			if !c.isFederated() && !c.isUpstream() {
+				s.forwardUpstream(m.Envelope, false)
+			}
 		}
 		c.send(&wire.Published{ID: m.Envelope.ID, Accepted: accepted})
 		return nil
@@ -509,6 +518,9 @@ func (s *Server) dispatch(c *client, msg wire.Message) error {
 		if verified {
 			s.counts.live.Add(1)
 			forwarded = s.fanOutLive(m.Envelope, c)
+			if !c.isFederated() && !c.isUpstream() {
+				s.forwardUpstream(m.Envelope, true)
+			}
 		}
 		c.send(&wire.Published{
 			ID:       m.Envelope.ID,
@@ -572,7 +584,10 @@ func (s *Server) dispatch(c *client, msg wire.Message) error {
 					pinned, m.Identity)
 			}
 		}
-		if c.isFederated() && c.hasCap(limits.CapNet) {
+		if c.isUpstream() {
+			s.refreshUpstream(c)
+			c.send(&wire.Want{Since: s.store.LatestTimestamp()})
+		} else if c.isFederated() && c.hasCap(limits.CapNet) {
 			c.send(&wire.Network{Hosts: s.networkMembers()})
 		}
 		return nil
@@ -646,6 +661,7 @@ type client struct {
 	peerIDValue  string
 	identity     string
 	federated    bool
+	upstream     bool
 	caps         map[string]bool
 	subscribed   map[string]struct{}
 	subscribedAt map[string]int64
@@ -751,6 +767,18 @@ func (c *client) isFederated() bool {
 	c.stateMu.Lock()
 	defer c.stateMu.Unlock()
 	return c.federated
+}
+
+func (c *client) setUpstream(v bool) {
+	c.stateMu.Lock()
+	c.upstream = v
+	c.stateMu.Unlock()
+}
+
+func (c *client) isUpstream() bool {
+	c.stateMu.Lock()
+	defer c.stateMu.Unlock()
+	return c.upstream
 }
 
 func (c *client) setSubscriptions(keys []string, now int64) {
