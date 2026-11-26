@@ -1,4 +1,4 @@
-// Generates relay-owrt/internal/wire/testdata/vector.json with the app's
+// Generates host/relay-owrt/internal/wire/testdata/vector.json with the app's
 // own envelope implementation. Run from host/ with `dart run tool/gen_wire_vector.dart`
 // after any wire-format change; the Go wire tests must accept the result.
 import 'dart:convert';

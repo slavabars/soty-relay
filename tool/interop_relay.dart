@@ -1,4 +1,4 @@
-// Interop check against a running dtm_relay (relay-owrt/).
+// Interop check against a running dtm_relay (host/relay-owrt/).
 //
 //   cd host && dart run tool/interop_relay.dart ws://127.0.0.1:13100/ws
 //
