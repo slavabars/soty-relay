@@ -84,10 +84,10 @@ msgid "Duplicates"
 msgstr "Дубликаты"
 
 msgid "Backfill"
-msgstr "Backfill"
+msgstr "Дозагрузка"
 
 msgid "Live"
-msgstr "Live"
+msgstr "Реальное время"
 
 msgid "Start"
 msgstr "Запустить"
@@ -132,7 +132,7 @@ msgid "WebSocket port for the protocol endpoint /ws on the LAN."
 msgstr "Порт WebSocket для /ws в локальной сети."
 
 msgid "Announce URL"
-msgstr "Announce URL"
+msgstr "URL объявления"
 
 msgid "Public ws:// or wss:// URL advertised to clients. Leave empty to use the router LAN address."
 msgstr "Публичный ws:// или wss:// URL для клиентов. Пусто — использовать LAN-адрес роутера."
