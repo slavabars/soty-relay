@@ -60,3 +60,5 @@ bin/dtm_host.exe
 # Router relay build output (packages, bundles)
 relay-owrt/dist/
 *.ipk
+__pycache__/
+*.pyc
