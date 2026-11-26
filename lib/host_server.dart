@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:dtm_app/core/crypto/handshake.dart';
 import 'package:dtm_app/core/crypto/hex.dart' show isHexOfLength;
 import 'package:dtm_app/core/host/host_link.dart' show HostEndpoint;
 import 'package:dtm_app/core/host/rate_limiter.dart';
@@ -25,6 +26,7 @@ class HostServer {
   final RateLimiter _rateLimiter;
   final RateLimiter _liveLimiter;
   final RateLimiter _globalLimiter;
+  final RateLimiter _dnsLimiter;
   int _insertsSinceCapCheck = 0;
   final Set<_ClientContext> _connections = {};
   final Map<String, _PeerLink> _links = {};
@@ -60,9 +62,11 @@ class HostServer {
     required RateLimiter rateLimiter,
     required RateLimiter liveLimiter,
     required RateLimiter globalLimiter,
+    required RateLimiter dnsLimiter,
   }) : _rateLimiter = rateLimiter,
        _liveLimiter = liveLimiter,
-       _globalLimiter = globalLimiter;
+       _globalLimiter = globalLimiter,
+       _dnsLimiter = dnsLimiter;
 
   factory HostServer({
     required HostDatabase db,
@@ -86,6 +90,11 @@ class HostServer {
       globalLimiter: RateLimiter(
         limitPerWindow: config.globalRateLimitPerWindow,
         windowSeconds: config.rateWindowSeconds,
+        maxKeys: 1,
+      ),
+      dnsLimiter: RateLimiter(
+        limitPerWindow: limits.hostDnsRatePerWindow,
+        windowSeconds: limits.hostRateWindowSeconds,
         maxKeys: 1,
       ),
     );
@@ -302,6 +311,7 @@ class HostServer {
     InternetAddress? remote,
   }) async {
     ctx ??= _ClientContext(ws: ws, remoteAddress: remote);
+    ctx.challenge ??= randomHandshakeNonce();
     _connectionsTotal++;
     _connections.add(ctx);
     try {
@@ -347,6 +357,8 @@ class HostServer {
           :final capabilities,
           :final myAddrs,
           :final announce,
+          :final nonce,
+          :final proof,
         ):
         if (myPeerId.isEmpty || myPeerId.length > limits.maxPeerIdLength) {
           throw const FormatException('HELLO peer id is out of bounds');
@@ -354,11 +366,28 @@ class HostServer {
         ctx.peerId = myPeerId;
         ctx.identity = myPeerId;
         ctx.capabilities.addAll(capabilities);
+        if (nonce != null) ctx.clientNonce = nonce;
+        if (proof != null && ctx.challenge != null) {
+          ctx.fedProofOk = await verifyHandshakeData(
+            publicKeyHex: myPeerId,
+            data: federationProofData(
+              challenge: ctx.challenge!,
+              peerId: myPeerId,
+              announce: announce ?? '',
+            ),
+            signatureHex: proof,
+          );
+        }
         // A relay role is granted, never claimed: an unknown client that
         // asserts `dtm-host` in its HELLO stays an ordinary client, so it can
         // never receive the federation fan-out or other devices' envelopes.
         ctx.isFederated = capabilities.contains('dtm-host') &&
-            await _mayFederate(ctx, myPeerId, announce);
+            await _mayFederate(
+              ctx,
+              myPeerId,
+              announce,
+              proofOk: ctx.fedProofOk,
+            );
         if (!ctx.isFederated && myAddrs.isNotEmpty) {
           db.rememberPeer(
             myPeerId,
@@ -366,14 +395,29 @@ class HostServer {
             nowMs: DateTime.now().toUtc().millisecondsSinceEpoch,
           );
         }
+        final serverTime = DateTime.now().toUtc().millisecondsSinceEpoch;
+        const welcomeCaps = ['dtm-tracker', 'dtm-net', 'dtm-live'];
+        final identity = await key.hexPub;
+        final welcomeProof = ctx.clientNonce == null
+            ? null
+            : await key.sign(
+                welcomeProofData(
+                  nonce: ctx.clientNonce!,
+                  serverTime: serverTime,
+                  identity: identity,
+                  capabilities: welcomeCaps,
+                ),
+              );
         _send(
           ctx,
           WelcomeMessage(
-            serverTime: DateTime.now().toUtc().millisecondsSinceEpoch,
+            serverTime: serverTime,
             retentionSeconds: config.retentionMs ~/ 1000,
             maxEnvelopeSize: limits.maxFrameBytes,
-            identity: await key.hexPub,
-            capabilities: const ['dtm-tracker', 'dtm-net', 'dtm-live'],
+            identity: identity,
+            capabilities: welcomeCaps,
+            challenge: ctx.challenge,
+            proof: welcomeProof,
           ),
         );
         if (ctx.isFederated && ctx.networkCapable && announce != null) {
@@ -386,6 +430,10 @@ class HostServer {
           _sendPresenceTo(ctx);
         }
       case SubscribeMessage(:final since, :final keys):
+        if (!ctx.subscribeLimiter.allow('subscribe')) {
+          _send(ctx, const EnvelopesMessage(envelopes: [], done: true));
+          break;
+        }
         final now = DateTime.now().toUtc().millisecondsSinceEpoch;
         final clampedSince = scanWindowStart(since, now);
         final clampedKeys = keys.take(
@@ -451,6 +499,10 @@ class HostServer {
           ),
         );
       case WantMessage(:final since):
+        if (!ctx.wantLimiter.allow('want')) {
+          _send(ctx, const HaveMessage(ids: []));
+          break;
+        }
         final now = DateTime.now().toUtc().millisecondsSinceEpoch;
         // The peer parser caps HAVE at maxGossipItems; a larger answer would
         // be dropped as a malformed frame and break federation on a busy host.
@@ -492,7 +544,13 @@ class HostServer {
             if (inserted) _fanOut(envelope, hops, except: ctx);
           }
         }
-      case WelcomeMessage(:final identity, :final capabilities):
+      case WelcomeMessage(
+          :final identity,
+          :final capabilities,
+          :final challenge,
+          :final proof,
+          :final serverTime,
+        ):
         ctx.capabilities.addAll(capabilities);
         final link = ctx.peerLink;
         if (link != null && identity != null) {
@@ -503,6 +561,46 @@ class HostServer {
               'Host identity mismatch: expected $pinned got $identity',
             );
           }
+        }
+        if (link != null && !link.proved && challenge != null) {
+          final nonce = ctx.clientNonce;
+          if (nonce != null && proof != null && identity != null) {
+            final ok = await verifyHandshakeData(
+              publicKeyHex: identity,
+              data: welcomeProofData(
+                nonce: nonce,
+                serverTime: serverTime,
+                identity: identity,
+                capabilities: capabilities,
+              ),
+              signatureHex: proof,
+            );
+            if (!ok) {
+              throw const FormatException('WELCOME proof is invalid');
+            }
+          } else if (link.endpoint.edPubKey != null) {
+            throw const FormatException('signed WELCOME is required');
+          }
+          final myPub = await key.hexPub;
+          final fedProof = await key.sign(
+            federationProofData(
+              challenge: challenge,
+              peerId: myPub,
+              announce: _selfEndpoint?.addr ?? '',
+            ),
+          );
+          link.ws?.add(
+            jsonEncode(
+              HelloMessage(
+                myPeerId: myPub,
+                capabilities: const ['dtm-host', 'dtm-net'],
+                announce: _selfEndpoint?.addr,
+                nonce: ctx.clientNonce,
+                proof: fedProof,
+              ).toJson(),
+            ),
+          );
+          link.proved = true;
         }
         if (ctx.isFederated && ctx.networkCapable) {
           _send(ctx, _networkMessage());
@@ -661,9 +759,11 @@ class HostServer {
   Future<bool> _mayFederate(
     _ClientContext ctx,
     String? claimedKey,
-    String? announce,
-  ) async {
+    String? announce, {
+    required bool proofOk,
+  }) async {
     if (claimedKey == null || claimedKey.isEmpty) return false;
+    if (!proofOk) return false;
     final link = ctx.peerLink;
     if (link != null) {
       final pinned = link.endpoint.edPubKey ?? '';
@@ -719,6 +819,7 @@ class HostServer {
       }
       return _sameAddress(cached.addresses, remote);
     }
+    if (!_dnsLimiter.allow('lookup')) return false;
     List<InternetAddress> addresses;
     try {
       addresses = await InternetAddress.lookup(uri.host).timeout(
@@ -941,12 +1042,14 @@ class HostServer {
       final ctx = _ClientContext(ws: ws)
         ..peerLink = link
         ..isFederated = true;
+      ctx.clientNonce = randomHandshakeNonce();
       ws.add(
         jsonEncode(
           HelloMessage(
             myPeerId: await key.hexPub,
             capabilities: const ['dtm-host', 'dtm-net'],
             announce: _selfEndpoint?.addr,
+            nonce: ctx.clientNonce,
           ).toJson(),
         ),
       );
@@ -1109,6 +1212,9 @@ class _ClientContext {
   final InternetAddress? remoteAddress;
   String? peerId;
   String? identity;
+  String? challenge;
+  String? clientNonce;
+  bool fedProofOk = false;
   bool isFederated = false;
   bool closed = false;
   _PeerLink? peerLink;
@@ -1120,6 +1226,19 @@ class _ClientContext {
 
   /// Capabilities the peer asserted in its HELLO (or our WELCOME back).
   final Set<String> capabilities = {};
+
+  /// Per-connection discovery budgets, so one socket cannot loop SUBSCRIBE or
+  /// WANT to force repeated multi-thousand-envelope dumps.
+  final RateLimiter subscribeLimiter = RateLimiter(
+    limitPerWindow: limits.hostSubscribeRatePerWindow,
+    windowSeconds: limits.hostRateWindowSeconds,
+    maxKeys: 1,
+  );
+  final RateLimiter wantLimiter = RateLimiter(
+    limitPerWindow: limits.hostWantRatePerWindow,
+    windowSeconds: limits.hostRateWindowSeconds,
+    maxKeys: 1,
+  );
 
   bool get networkCapable => capabilities.contains('dtm-net');
 
@@ -1139,6 +1258,7 @@ class _PeerLink {
   final bool requirePublic;
   String? identity;
   WebSocket? ws;
+  bool proved = false;
   int attempt = 0;
   bool closed = false;
   Timer? backoff;

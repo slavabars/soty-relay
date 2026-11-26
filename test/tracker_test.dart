@@ -75,8 +75,8 @@ void main() {
         listenAddress: '127.0.0.1',
         port: 0,
         federatedPeers: [
-          HostEndpoint(addr: 'ws://host-b.example/ws'),
-          HostEndpoint(addr: 'ws://host-c.example/ws'),
+          HostEndpoint(addr: 'wss://host-b.example/ws'),
+          HostEndpoint(addr: 'wss://host-c.example/ws'),
         ],
       ),
     );
@@ -88,7 +88,7 @@ void main() {
     final list = await client.waitFor<PeerListMessage>();
     expect(
       list.hosts.map((h) => h.addr),
-      ['ws://host-b.example/ws', 'ws://host-c.example/ws'],
+      ['wss://host-b.example/ws', 'wss://host-c.example/ws'],
     );
 
     await client.close();

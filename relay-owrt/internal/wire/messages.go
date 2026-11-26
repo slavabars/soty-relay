@@ -21,6 +21,8 @@ type Hello struct {
 	Capabilities []string
 	MyAddrs      []string
 	Announce     *string
+	Nonce        string
+	Proof        string
 }
 
 type Welcome struct {
@@ -29,6 +31,8 @@ type Welcome struct {
 	MaxEnvelopeSize  int64
 	Identity         string
 	Capabilities     []string
+	Challenge        string
+	Proof            string
 }
 
 type Want struct{ Since int64 }
@@ -139,11 +143,27 @@ func Parse(data []byte) (Message, error) {
 			}
 			announcePtr = &announce
 		}
+		nonce, _, err := f.optStr("nonce")
+		if err != nil {
+			return nil, err
+		}
+		if nonce != "" && !isHexOfLength(nonce, 32) {
+			return nil, errors.New("HELLO nonce must be 32-byte hex")
+		}
+		proof, _, err := f.optStr("proof")
+		if err != nil {
+			return nil, err
+		}
+		if proof != "" && !isHexOfLength(proof, 64) {
+			return nil, errors.New("HELLO proof must be 64-byte hex")
+		}
 		return &Hello{
 			MyPeerID:     peerID,
 			Capabilities: caps,
 			MyAddrs:      addrs,
 			Announce:     announcePtr,
+			Nonce:        nonce,
+			Proof:        proof,
 		}, nil
 	case "WELCOME":
 		serverTime, err := f.integer("serverTime")
@@ -166,12 +186,28 @@ func Parse(data []byte) (Message, error) {
 		if err != nil {
 			return nil, err
 		}
+		challenge, _, err := f.optStr("challenge")
+		if err != nil {
+			return nil, err
+		}
+		if challenge != "" && !isHexOfLength(challenge, 32) {
+			return nil, errors.New("WELCOME challenge must be 32-byte hex")
+		}
+		proof, _, err := f.optStr("proof")
+		if err != nil {
+			return nil, err
+		}
+		if proof != "" && !isHexOfLength(proof, 64) {
+			return nil, errors.New("WELCOME proof must be 64-byte hex")
+		}
 		return &Welcome{
 			ServerTime:       serverTime,
 			RetentionSeconds: retention,
 			MaxEnvelopeSize:  maxEnvelope,
 			Identity:         identity,
 			Capabilities:     caps,
+			Challenge:        challenge,
+			Proof:            proof,
 		}, nil
 	case "WANT":
 		since, _, err := f.optInt("since")
@@ -287,16 +323,29 @@ func Encode(m Message) ([]byte, error) {
 		if v.Announce != nil {
 			out["announce"] = *v.Announce
 		}
+		if v.Nonce != "" {
+			out["nonce"] = v.Nonce
+		}
+		if v.Proof != "" {
+			out["proof"] = v.Proof
+		}
 		return json.Marshal(out)
 	case *Welcome:
-		return json.Marshal(map[string]any{
+		out := map[string]any{
 			"type":             "WELCOME",
 			"serverTime":       v.ServerTime,
 			"retentionSeconds": v.RetentionSeconds,
 			"maxEnvelopeSize":  v.MaxEnvelopeSize,
 			"identity":         v.Identity,
 			"capabilities":     nonNil(v.Capabilities),
-		})
+		}
+		if v.Challenge != "" {
+			out["challenge"] = v.Challenge
+		}
+		if v.Proof != "" {
+			out["proof"] = v.Proof
+		}
+		return json.Marshal(out)
 	case *Want:
 		return json.Marshal(map[string]any{"type": "WANT", "since": v.Since})
 	case *Have:

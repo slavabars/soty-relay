@@ -6,12 +6,15 @@ package server
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -366,6 +369,7 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		subscribed:   make(map[string]struct{}),
 		subscribedAt: make(map[string]int64),
 		clientDone:   make(chan struct{}),
+		challenge:    randomHex(32),
 	}
 	s.mu.Lock()
 	if s.stopping || len(s.conns) >= s.cfg.MaxConnections {
@@ -464,15 +468,21 @@ func (s *Server) dispatch(c *client, msg wire.Message) error {
 		if !federated && len(m.MyAddrs) > 0 {
 			s.store.RememberPeer(m.MyPeerID, "", m.MyAddrs, now)
 		}
-		c.send(&wire.Welcome{
+		welcomeCaps := []string{limits.CapTracker, limits.CapNet, limits.CapLive}
+		welcome := &wire.Welcome{
 			ServerTime:       now,
 			RetentionSeconds: s.cfg.RetentionMs / 1000,
 			MaxEnvelopeSize:  limits.MaxFrameBytes,
 			Identity:         s.id.PubHex(),
-			Capabilities: []string{
-				limits.CapTracker, limits.CapNet, limits.CapLive,
-			},
-		})
+			Capabilities:     welcomeCaps,
+			Challenge:        c.challenge,
+		}
+		if m.Nonce != "" {
+			data := fmt.Sprintf("dtm-welcome-v1|%s|%d|%s|%s",
+				m.Nonce, now, welcome.Identity, strings.Join(welcomeCaps, ","))
+			welcome.Proof = s.id.Sign([]byte(data))
+		}
+		c.send(welcome)
 		if federated && c.hasCap(limits.CapNet) && m.Announce != nil {
 			s.adoptNetworkMember(wire.HostEndpoint{
 				Addr:     *m.Announce,
@@ -486,6 +496,11 @@ func (s *Server) dispatch(c *client, msg wire.Message) error {
 		return nil
 	case *wire.Subscribe:
 		now := nowMs()
+		if !c.allowDiscovery(&c.subscribeWindow, &c.subscribeCount,
+			limits.HostSubscribesPerWindow, now) {
+			c.send(&wire.Envelopes{Envelopes: []*wire.Envelope{}, Done: true})
+			return nil
+		}
 		since := scanWindowStart(m.Since, now)
 		keys := m.Keys
 		if len(keys) > limits.MaxHostSubscriptionKeys {
@@ -534,6 +549,11 @@ func (s *Server) dispatch(c *client, msg wire.Message) error {
 		return nil
 	case *wire.Want:
 		now := nowMs()
+		if !c.allowDiscovery(&c.wantWindow, &c.wantCount,
+			limits.HostWantsPerWindow, now) {
+			c.send(&wire.Have{IDs: []string{}})
+			return nil
+		}
 		// HAVE is bounded by the same maxGossipItems the peer parser
 		// enforces; a 4096-id answer would be rejected as a malformed frame.
 		ids := s.store.IDsSince(scanWindowStart(m.Since, now),
@@ -644,6 +664,14 @@ func remoteHost(remoteAddr string) string {
 	return host
 }
 
+func randomHex(n int) string {
+	raw := make([]byte, n)
+	if _, err := rand.Read(raw); err != nil {
+		return ""
+	}
+	return hex.EncodeToString(raw)
+}
+
 func isHex32(s string) bool {
 	if len(s) != 64 {
 		return false
@@ -665,19 +693,40 @@ type client struct {
 
 	writeMu sync.Mutex
 
-	stateMu      sync.Mutex
-	peerIDValue  string
-	identity     string
-	federated    bool
-	upstream     bool
-	caps         map[string]bool
-	subscribed   map[string]struct{}
-	subscribedAt map[string]int64
-	closed       bool
-	link         *peerLink
-	clientDone   chan struct{}
+	stateMu         sync.Mutex
+	peerIDValue     string
+	identity        string
+	challenge       string
+	subscribeWindow int64
+	subscribeCount  int
+	wantWindow      int64
+	wantCount       int
+	federated       bool
+	upstream        bool
+	caps            map[string]bool
+	subscribed      map[string]struct{}
+	subscribedAt    map[string]int64
+	closed          bool
+	link            *peerLink
+	clientDone      chan struct{}
 
 	closeOnce sync.Once
+}
+
+func (c *client) allowDiscovery(window *int64, count *int,
+	limit int, now int64) bool {
+	w := now / (limits.HostRateWindowSeconds * 1000)
+	c.stateMu.Lock()
+	defer c.stateMu.Unlock()
+	if *window != w {
+		*window = w
+		*count = 0
+	}
+	if *count >= limit {
+		return false
+	}
+	*count++
+	return true
 }
 
 func (c *client) send(msg wire.Message) {

@@ -73,9 +73,11 @@ return view.extend({
 		};
 
 		o = s.option(form.DummyValue, '_identity', _('Identity file'));
-		o.rawhtml = true;
-		o.default = '<code>' + (uci.get('dtm_relay', 'relay', 'identity') ||
-			'/etc/dtm-relay/identity') + '</code><br />' +
+		// Never render a UCI value as raw HTML: the path is operator-editable
+		// and an HTML injection here would run in the LuCI origin.
+		o.rawhtml = false;
+		o.default = (uci.get('dtm_relay', 'relay', 'identity') ||
+			'/etc/dtm-relay/identity') + ' — ' +
 			_('Read-only. Changing or deleting this Ed25519 seed creates a new relay identity and breaks every client that pinned this relay.');
 
 		o = s.option(form.Value, 'retention_days', _('Retention, days'),

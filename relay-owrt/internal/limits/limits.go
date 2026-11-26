@@ -46,6 +46,11 @@ const (
 	// HostMaxSyncEnvelopes bounds one WANT answer.
 	HostMaxSyncEnvelopes = 4096
 
+	// Per-connection discovery budgets (mirror hostSubscribeRatePerWindow
+	// and hostWantRatePerWindow in security_limits.dart).
+	HostSubscribesPerWindow = 20
+	HostWantsPerWindow      = 60
+
 	// Tracker and federation topology bounds.
 	MaxTrackerPeers            = 64
 	MaxTrackerHosts            = 32
