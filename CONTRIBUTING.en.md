@@ -29,6 +29,23 @@ dart analyze
 flutter test --no-pub
 ```
 
+## Router relay (Go)
+
+`relay-owrt/` is the second protocol implementation in Go. It must match `dtm_host` on the wire, so protocol changes are checked in both implementations.
+
+```bash
+cd relay-owrt
+go test ./...
+go vet ./...
+VERSION=X.Y.Z+N ./openwrt/build-bundle.sh
+cd ../.. && scripts/verify_owrt_bundle.sh build-artifacts/dtm_relay-X.Y.Z+N-ipk.tar.gz
+```
+
+- The golden vector `internal/wire/testdata/vector.json` is produced by `host/tool/gen_wire_vector.dart`; never bend it to the Go code.
+- Every architecture in `openwrt/arches.txt` must build; `GOMIPS=softfloat` is mandatory for mips.
+- An `.ipk` for OpenWrt 24.10+ is a gzip-tar, not an `ar` archive.
+- A live-router test starts with a verified backup (`sysupgrade -b`, overlay, `/etc`, packages) and ends with a rollback to the original `uci export`/`opkg list-installed`.
+
 ## Rules
 
 - **Test first**, including hostile paths: oversize frames, bad signatures, replayed envelopes, impersonated federation peers, subscription floods.

@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/slavabars/soty-relay-owrt/internal/limits"
+	"github.com/slavabars/soty-relay/relay-owrt/internal/limits"
 )
 
 // Envelope is the opaque, end-to-end encrypted wire unit. A relay verifies

@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/slavabars/soty-relay-owrt/internal/identity"
-	"github.com/slavabars/soty-relay-owrt/internal/wire"
+	"github.com/slavabars/soty-relay/relay-owrt/internal/identity"
+	"github.com/slavabars/soty-relay/relay-owrt/internal/wire"
 )
 
 func testEnv(n int, ts int64, recipient string) *wire.Envelope {

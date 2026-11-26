@@ -32,6 +32,18 @@ flutter test --no-pub
 dart compile exe bin/dtm_host.dart -o build/dtm_host
 ```
 
+## Релей для OpenWrt
+
+В `relay-owrt/` лежит `dtm_relay` — статическая Go-реализация того же протокола для роутеров на musl (mipsel, mips, armv7, aarch64, x86_64). Она не заменяет `dtm_host`: серверный хост остаётся на Dart/SQLite, а роутер обслуживает свою LAN и по умолчанию не открывает исходящих соединений.
+
+```bash
+cd relay-owrt
+go test ./...
+VERSION=1.7.20+38 ./openwrt/build-bundle.sh
+```
+
+`dist/dtm_relay-<version>-ipk.tar.gz` содержит пять `.ipk`, `SHA256SUMS` и `README.txt`. Установка, UCI и ограничения — в [`relay-owrt/README.md`](relay-owrt/README.md); в релизах Soty этот bundle публикуется как `dtm_relay-X.Y.Z+N-ipk.tar.gz`.
+
 ## Безопасность
 
 - Модель угроз: [`docs/threat_model.md`](docs/threat_model.md).

@@ -32,6 +32,18 @@ flutter test --no-pub
 dart compile exe bin/dtm_host.dart -o build/dtm_host
 ```
 
+## Router relay for OpenWrt
+
+`relay-owrt/` contains `dtm_relay`, a static Go implementation of the same protocol for musl routers (mipsel, mips, armv7, aarch64, x86_64). It does not replace `dtm_host`: the server-side host stays on Dart/SQLite, while a router serves its LAN and opens no outbound connections by default.
+
+```bash
+cd relay-owrt
+go test ./...
+VERSION=1.7.20+38 ./openwrt/build-bundle.sh
+```
+
+`dist/dtm_relay-<version>-ipk.tar.gz` contains five `.ipk` files, `SHA256SUMS` and `README.txt`. Install, UCI and limits are in [`relay-owrt/README.en.md`](relay-owrt/README.en.md); Soty releases publish this bundle as `dtm_relay-X.Y.Z+N-ipk.tar.gz`.
+
 ## Security
 
 - Threat model: [`docs/threat_model.md`](docs/threat_model.md).

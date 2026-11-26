@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/slavabars/soty-relay-owrt/internal/wire"
+	"github.com/slavabars/soty-relay/relay-owrt/internal/wire"
 )
 
 const (

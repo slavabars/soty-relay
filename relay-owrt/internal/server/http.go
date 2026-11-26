@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/slavabars/soty-relay-owrt/internal/limits"
+	"github.com/slavabars/soty-relay/relay-owrt/internal/limits"
 )
 
 func writeJSON(w http.ResponseWriter, payload any) {

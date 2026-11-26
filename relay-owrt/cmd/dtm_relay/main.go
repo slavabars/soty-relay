@@ -16,13 +16,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/slavabars/soty-relay-owrt/internal/identity"
-	"github.com/slavabars/soty-relay-owrt/internal/server"
-	"github.com/slavabars/soty-relay-owrt/internal/store"
-	"github.com/slavabars/soty-relay-owrt/internal/wire"
+	"github.com/slavabars/soty-relay/relay-owrt/internal/identity"
+	"github.com/slavabars/soty-relay/relay-owrt/internal/server"
+	"github.com/slavabars/soty-relay/relay-owrt/internal/store"
+	"github.com/slavabars/soty-relay/relay-owrt/internal/wire"
 )
 
-const version = "0.1.0"
+// version is injected by the release build: -ldflags "-X main.version=X.Y.Z+N".
+var version = "dev"
 
 const usage = `Usage: dtm_relay [options]
 

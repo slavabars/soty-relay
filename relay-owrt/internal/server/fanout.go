@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/slavabars/soty-relay-owrt/internal/limits"
-	"github.com/slavabars/soty-relay-owrt/internal/wire"
+	"github.com/slavabars/soty-relay/relay-owrt/internal/limits"
+	"github.com/slavabars/soty-relay/relay-owrt/internal/wire"
 )
 
 // verifyEnvelope is the fixed pipeline: rate limit → clock skew → Ed25519

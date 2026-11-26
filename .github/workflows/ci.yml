@@ -54,6 +54,34 @@ jobs:
         working-directory: host
         run: flutter test --no-pub --reporter expanded
 
+  go-relay:
+    name: go relay
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout relay
+        uses: actions/checkout@v4
+        with:
+          path: host
+
+      - name: Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: host/relay-owrt/go.mod
+          cache-dependency-path: host/relay-owrt/go.sum
+
+      - name: Tests
+        working-directory: host/relay-owrt
+        run: go test ./...
+
+      - name: Vet
+        working-directory: host/relay-owrt
+        run: go vet ./...
+
+      - name: Cross-build packages
+        working-directory: host/relay-owrt
+        run: ./openwrt/build-ipk.sh all
+
   secret-scan:
     name: secret scan
     runs-on: ubuntu-latest

@@ -18,10 +18,10 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"github.com/slavabars/soty-relay-owrt/internal/identity"
-	"github.com/slavabars/soty-relay-owrt/internal/limits"
-	"github.com/slavabars/soty-relay-owrt/internal/store"
-	"github.com/slavabars/soty-relay-owrt/internal/wire"
+	"github.com/slavabars/soty-relay/relay-owrt/internal/identity"
+	"github.com/slavabars/soty-relay/relay-owrt/internal/limits"
+	"github.com/slavabars/soty-relay/relay-owrt/internal/store"
+	"github.com/slavabars/soty-relay/relay-owrt/internal/wire"
 )
 
 // Config is the router operator's knob set. Defaults mirror dtm_host; only

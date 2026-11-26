@@ -8,8 +8,8 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"github.com/slavabars/soty-relay-owrt/internal/limits"
-	"github.com/slavabars/soty-relay-owrt/internal/wire"
+	"github.com/slavabars/soty-relay/relay-owrt/internal/limits"
+	"github.com/slavabars/soty-relay/relay-owrt/internal/wire"
 )
 
 type addrCheck struct {

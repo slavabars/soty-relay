@@ -56,3 +56,7 @@ dtm_host.app
 dtm_host.app.new
 dtm_host.bin
 bin/dtm_host.exe
+
+# Router relay build output (packages, bundles)
+relay-owrt/dist/
+*.ipk

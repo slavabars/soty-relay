@@ -15,20 +15,25 @@
 ## Сборка
 
 ```sh
-cd relay-owrt
+cd host/relay-owrt
 make test          # go test ./...
 make               # vet + test + локальный бинарь в dist/
 make ipk           # .ipk для mipsel_24kc, mips_24kc, aarch64, armv7, x86_64
+
+# релизный bundle: пять .ipk + SHA256SUMS + README.txt
+VERSION=X.Y.Z+N ./openwrt/build-bundle.sh
 ```
 
-Один архив: `openwrt/build-ipk.sh mipsel_24kc`. Результат — `dist/dtm_relay_0.1.0-1_<arch>.ipk`. Зависимостей у пакета нет: бинарь статический. Формат `.ipk` — gzip-tar (`debian-binary`, `control.tar.gz`, `data.tar.gz`), как его читает opkg в OpenWrt 24.10+; на более старых релизах используйте buildroot-пакет (там формат собирает сама OpenWrt).
+Один пакет: `openwrt/build-ipk.sh mipsel_24kc` → `dist/dtm_relay_<version>-1_<arch>.ipk`. Зависимостей у пакета нет: бинарь статический. Формат `.ipk` — gzip-tar (`debian-binary`, `control.tar.gz`, `data.tar.gz`), как его читает opkg в OpenWrt 24.10+; на более старых релизах используйте buildroot-пакет (там формат собирает сама OpenWrt).
 
 `openwrt/Makefile` — канонический пакет для OpenWrt buildroot (feed). Проверенный на обычном Linux путь — `build-ipk.sh`; buildroot-версия требует SDK и раскладки, где исходники лежат рядом с каталогом `openwrt/`.
 
 ## Установка
 
 ```sh
-opkg install dtm_relay_0.1.0-1_mipsel_24kc.ipk
+tar -xzf dtm_relay-X.Y.Z+N-ipk.tar.gz
+sha256sum -c SHA256SUMS
+opkg install dtm_relay_X.Y.Z+N-1_mipsel_24kc.ipk
 uci set dtm_relay.relay.enabled='1'
 uci set dtm_relay.relay.port='3100'
 uci commit dtm_relay
@@ -107,10 +112,14 @@ uci commit dtm_relay
 
 ```sh
 go test ./...
-python3 ../scripts/host_probe.py ws://192.168.1.1:3100/ws <pinned-ed25519>
+python3 ../../scripts/host_probe.py ws://192.168.1.1:3100/ws <pinned-ed25519>
 ```
 
-`host_probe.py` выполняет тот же handshake и проверку ключа, что приложение при добавлении релея. Для сквозной проверки с настоящим кодом приложения (не только Go-клиентом) есть `../host/tool/interop_relay.dart`: он подключается к запущенному релею, подписывается, публикует и принимает конверт, созданный `createEnvelopeForPubKey`, и проверяет presence, `PEER_LIST` и live-доставку.
+`host_probe.py` выполняет тот же handshake и проверку ключа, что приложение при добавлении релея. Для сквозной проверки с настоящим кодом приложения (не только Go-клиентом) есть `../tool/interop_relay.dart`: он подключается к запущенному релею, подписывается, публикует и принимает конверт, созданный `createEnvelopeForPubKey`, и проверяет presence, `PEER_LIST` и live-доставку.
+
+## Бекап перед тестом на роутере
+
+Любой тест на рабочем роутере начинается с проверенного бекапа: `sysupgrade -b`, копия overlay upper, `/etc`, список пакетов и SHA-256. Установка допускается только после того, как бекап скачан и сверен; откат должен вернуть те же `uci export` и `opkg list-installed`. Готовый bundle публикуется в релизах Soty как `dtm_relay-X.Y.Z+N-ipk.tar.gz`, отдельные `.ipk` в релиз не прикладываются.
 
 ## Что не входит в эту версию
 

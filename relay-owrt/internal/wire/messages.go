@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/slavabars/soty-relay-owrt/internal/limits"
+	"github.com/slavabars/soty-relay/relay-owrt/internal/limits"
 )
 
 // Message is one parsed gossip frame. Parsing is strict: a missing or

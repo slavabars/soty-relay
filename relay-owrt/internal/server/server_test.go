@@ -19,10 +19,10 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"github.com/slavabars/soty-relay-owrt/internal/identity"
-	"github.com/slavabars/soty-relay-owrt/internal/limits"
-	"github.com/slavabars/soty-relay-owrt/internal/store"
-	"github.com/slavabars/soty-relay-owrt/internal/wire"
+	"github.com/slavabars/soty-relay/relay-owrt/internal/identity"
+	"github.com/slavabars/soty-relay/relay-owrt/internal/limits"
+	"github.com/slavabars/soty-relay/relay-owrt/internal/store"
+	"github.com/slavabars/soty-relay/relay-owrt/internal/wire"
 )
 
 const testSeed = "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20"

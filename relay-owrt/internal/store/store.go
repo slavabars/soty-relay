@@ -12,9 +12,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/slavabars/soty-relay-owrt/internal/identity"
-	"github.com/slavabars/soty-relay-owrt/internal/limits"
-	"github.com/slavabars/soty-relay-owrt/internal/wire"
+	"github.com/slavabars/soty-relay/relay-owrt/internal/identity"
+	"github.com/slavabars/soty-relay/relay-owrt/internal/limits"
+	"github.com/slavabars/soty-relay/relay-owrt/internal/wire"
 )
 
 // Entry is a stored envelope plus the relay bookkeeping dtm_host keeps in

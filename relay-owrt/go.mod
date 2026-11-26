@@ -1,4 +1,4 @@
-module github.com/slavabars/soty-relay-owrt
+module github.com/slavabars/soty-relay/relay-owrt
 
 go 1.27
 

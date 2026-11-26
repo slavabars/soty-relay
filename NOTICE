@@ -13,6 +13,8 @@ Third-party components
 
 Dependencies are declared in pubspec.yaml / pubspec.lock and keep their own licences. `dtm_host` imports the `dtm_app` package for the shared envelope and crypto code.
 
+The Go router relay (`relay-owrt/`) vendors `github.com/gorilla/websocket`, BSD 3-Clause. Its licence text is in `relay-owrt/vendor/github.com/gorilla/websocket/LICENSE`.
+
 Trademark
 ---------
 

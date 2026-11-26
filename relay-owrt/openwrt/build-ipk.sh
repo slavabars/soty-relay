@@ -17,6 +17,8 @@ GO="${GO:-go}"
 # FPU-less MT7621 class SoCs used by most supported routers.
 build_one() {
 	owrt_arch="$1" goarch="$2" goarm="$3" gomips="$4"
+	[ "$goarm" = "-" ] && goarm=""
+	[ "$gomips" = "-" ] && gomips=""
 	bin="$OUT/$owrt_arch/dtm_relay"
 
 	echo "build  $owrt_arch (GOARCH=$goarch GOARM=$goarm GOMIPS=$gomips)"
@@ -25,7 +27,7 @@ build_one() {
 		cd "$ROOT"
 		CGO_ENABLED=0 GOOS=linux GOARCH="$goarch" GOARM="$goarm" \
 			GOMIPS="$gomips" "$GO" build -mod=vendor -trimpath \
-			-ldflags="-s -w" -o "$bin" ./cmd/dtm_relay
+			-ldflags="-s -w -X main.version=$VERSION" -o "$bin" ./cmd/dtm_relay
 	)
 	package_one "$owrt_arch" "$bin"
 }
@@ -97,24 +99,30 @@ EOF
 	rm -rf "$stage"
 }
 
-case "${1:-all}" in
-all)
-	build_one mipsel_24kc mipsle "" softfloat
-	build_one mips_24kc mips "" softfloat
-	build_one aarch64_cortex-a53 arm64 "" ""
-	build_one arm_cortex-a7_neon-vfpv4 arm 7 ""
-	build_one x86_64 amd64 "" ""
-	;;
-mipsel_24kc) build_one mipsel_24kc mipsle "" softfloat ;;
-mips_24kc) build_one mips_24kc mips "" softfloat ;;
-aarch64_cortex-a53) build_one aarch64_cortex-a53 arm64 "" "" ;;
-arm_cortex-a7_neon-vfpv4) build_one arm_cortex-a7_neon-vfpv4 arm 7 "" ;;
-x86_64) build_one x86_64 amd64 "" "" ;;
-*)
-	echo "unknown architecture: $1" >&2
-	echo "known: mipsel_24kc mips_24kc aarch64_cortex-a53 arm_cortex-a7_neon-vfpv4 x86_64" >&2
-	exit 64
-	;;
-esac
+arches() {
+	awk 'NF && $1 !~ /^#/ { print $1 }' "$ROOT/openwrt/arches.txt"
+}
+
+build_named() {
+	arch="$1"
+	line="$(awk -v a="$arch" '$1 == a { print; exit }' \
+		"$ROOT/openwrt/arches.txt")"
+	if [ -z "$line" ]; then
+		echo "unknown architecture: $arch" >&2
+		echo "known: $(arches | tr '\n' ' ')" >&2
+		exit 64
+	fi
+	# shellcheck disable=SC2086
+	set -- $line
+	build_one "$1" "$2" "$3" "$4"
+}
+
+if [ "${1:-all}" = "all" ]; then
+	for arch in $(arches); do
+		build_named "$arch"
+	done
+else
+	build_named "$1"
+fi
 
 echo "done: $OUT"

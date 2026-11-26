@@ -15,20 +15,25 @@ mips/mipsle requires `GOMIPS=softfloat` because most of those SoCs have no FPU; 
 ## Build
 
 ```sh
-cd relay-owrt
+cd host/relay-owrt
 make test          # go test ./...
 make               # vet + test + local binary in dist/
 make ipk           # .ipk for mipsel_24kc, mips_24kc, aarch64, armv7, x86_64
+
+# release bundle: five .ipk files + SHA256SUMS + README.txt
+VERSION=X.Y.Z+N ./openwrt/build-bundle.sh
 ```
 
-One archive: `openwrt/build-ipk.sh mipsel_24kc`. The result is `dist/dtm_relay_0.1.0-1_<arch>.ipk`. The package has no dependencies: the binary is static. The `.ipk` is a gzip-compressed tar (`debian-binary`, `control.tar.gz`, `data.tar.gz`), the format opkg reads on OpenWrt 24.10+; older releases should use the buildroot package, which lets OpenWrt produce its own format.
+One package: `openwrt/build-ipk.sh mipsel_24kc` → `dist/dtm_relay_<version>-1_<arch>.ipk`. The package has no dependencies: the binary is static. The `.ipk` is a gzip-compressed tar (`debian-binary`, `control.tar.gz`, `data.tar.gz`), the format opkg reads on OpenWrt 24.10+; older releases should use the buildroot package, which lets OpenWrt produce its own format.
 
 `openwrt/Makefile` is the canonical OpenWrt buildroot package (feed layout). The tested path on a plain Linux host is `build-ipk.sh`; the buildroot variant requires the SDK and a layout where the sources sit next to the `openwrt/` directory.
 
 ## Install
 
 ```sh
-opkg install dtm_relay_0.1.0-1_mipsel_24kc.ipk
+tar -xzf dtm_relay-X.Y.Z+N-ipk.tar.gz
+sha256sum -c SHA256SUMS
+opkg install dtm_relay_X.Y.Z+N-1_mipsel_24kc.ipk
 uci set dtm_relay.relay.enabled='1'
 uci set dtm_relay.relay.port='3100'
 uci commit dtm_relay
@@ -107,10 +112,14 @@ With `federation=0` any `dtm-host` claim in HELLO stays an ordinary client: othe
 
 ```sh
 go test ./...
-python3 ../scripts/host_probe.py ws://192.168.1.1:3100/ws <pinned-ed25519>
+python3 ../../scripts/host_probe.py ws://192.168.1.1:3100/ws <pinned-ed25519>
 ```
 
-`host_probe.py` performs the same handshake and key check the app does when adding a relay. For an end-to-end check with the app's real code (not just a Go client), use `../host/tool/interop_relay.dart`: it connects to a running relay, subscribes, publishes and receives an envelope built by `createEnvelopeForPubKey`, and checks presence, `PEER_LIST` and live delivery.
+`host_probe.py` performs the same handshake and key check the app does when adding a relay. For an end-to-end check with the app's real code (not just a Go client), use `../tool/interop_relay.dart`: it connects to a running relay, subscribes, publishes and receives an envelope built by `createEnvelopeForPubKey`, and checks presence, `PEER_LIST` and live delivery.
+
+## Back up before a router test
+
+Any test on a working router starts with a verified backup: `sysupgrade -b`, a copy of the overlay upper, `/etc`, the package list and SHA-256. Install only after the backup is downloaded and checked; a rollback must restore the same `uci export` and `opkg list-installed`. The finished bundle is published in Soty releases as `dtm_relay-X.Y.Z+N-ipk.tar.gz`; individual `.ipk` files are not attached to a release.
 
 ## Not in this version
 

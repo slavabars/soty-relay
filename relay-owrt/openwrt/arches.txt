@@ -1,0 +1,8 @@
+# OpenWrt architecture -> Go target for rebuilds.
+# GOMIPS=softfloat is mandatory for the FPU-less MT7621 class SoCs.
+# Fields: OpenWrt arch, GOARCH, GOARM, GOMIPS. Use "-" for an empty value.
+mipsel_24kc              mipsle  -   softfloat
+mips_24kc                mips    -   softfloat
+aarch64_cortex-a53       arm64   -   -
+arm_cortex-a7_neon-vfpv4 arm     7   -
+x86_64                   amd64   -   -

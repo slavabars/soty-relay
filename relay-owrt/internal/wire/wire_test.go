@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/slavabars/soty-relay-owrt/internal/limits"
+	"github.com/slavabars/soty-relay/relay-owrt/internal/limits"
 )
 
 // The vector in testdata/vector.json is produced by the app's own
