@@ -1,0 +1,5 @@
+/dist/
+/dtm_relay
+*.ipk
+*.test
+coverage.out

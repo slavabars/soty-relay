@@ -1,0 +1,13 @@
+{
+  "seed": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+  "envelope": {
+    "id": "5c7b500b28c588f0b6f9d6d113792b64b65855a12440270bc7b74c8c7a5973f0",
+    "senderPubKey": "79b5562e8fe654f94078b112e8a98ba7901f853ae695bed7e0e3910bad049664",
+    "recipientPubKey": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "timestamp": 1700000000000,
+    "ciphertext": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+Pw==",
+    "ephemeralPubKey": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "signature": "dcdfe85aaa8c3f27969d58ab899e7650a7a05e0c0477c6d8645d40f4c61b11e9a35fd17816a87ca5ff2a1b70615e704bbd357998537026a41184d16b28548d0c",
+    "chainLink": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  }
+}
