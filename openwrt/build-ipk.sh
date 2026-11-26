@@ -86,10 +86,13 @@ EOF
 		--mtime='@0' -czf "$stage/data.tar.gz" .
 	printf '2.0\n' > "$stage/debian-binary"
 
+	# OpenWrt 24.10+ (opkg 2024) reads an .ipk as a gzip-compressed tar with
+	# these three members; an ar archive is rejected as malformed. Older
+	# releases need the buildroot package instead.
 	ipk="$OUT/dtm_relay_${VERSION}-1_${owrt_arch}.ipk"
 	rm -f "$ipk"
-	(cd "$stage" && ar r "$ipk" debian-binary control.tar.gz data.tar.gz \
-		>/dev/null)
+	tar -C "$stage" --owner=0 --group=0 --numeric-owner --mtime='@0' \
+		-czf "$ipk" ./debian-binary ./control.tar.gz ./data.tar.gz
 	echo "ipk    $ipk"
 	rm -rf "$stage"
 }

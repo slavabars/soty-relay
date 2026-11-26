@@ -21,7 +21,7 @@ make               # vet + test + local binary in dist/
 make ipk           # .ipk for mipsel_24kc, mips_24kc, aarch64, armv7, x86_64
 ```
 
-One archive: `openwrt/build-ipk.sh mipsel_24kc`. The result is `dist/dtm_relay_0.1.0-1_<arch>.ipk`. The package has no dependencies: the binary is static.
+One archive: `openwrt/build-ipk.sh mipsel_24kc`. The result is `dist/dtm_relay_0.1.0-1_<arch>.ipk`. The package has no dependencies: the binary is static. The `.ipk` is a gzip-compressed tar (`debian-binary`, `control.tar.gz`, `data.tar.gz`), the format opkg reads on OpenWrt 24.10+; older releases should use the buildroot package, which lets OpenWrt produce its own format.
 
 `openwrt/Makefile` is the canonical OpenWrt buildroot package (feed layout). The tested path on a plain Linux host is `build-ipk.sh`; the buildroot variant requires the SDK and a layout where the sources sit next to the `openwrt/` directory.
 
