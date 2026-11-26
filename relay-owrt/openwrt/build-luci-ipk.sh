@@ -21,6 +21,19 @@ cp -R "$PKG/htdocs/." "$stage/data/www/"
 cp -R "$PKG/root/." "$stage/data/"
 chmod 0755 "$stage/data/usr/libexec/dtm-relay-status"
 
+# LuCI loads every /usr/lib/lua/luci/i18n/*.<lang>.lmo into the active
+# catalog. Compile the PO files here: the local build does not have the
+# OpenWrt po2lmo tool, and shipping only the .po silently leaves the UI in
+# English.
+i18n="$stage/data/usr/lib/lua/luci/i18n"
+mkdir -p "$i18n"
+for po in "$PKG"/po/*/*.po; do
+	[ -f "$po" ] || continue
+	lang="$(basename "$(dirname "$po")")"
+	python3 "$ROOT/openwrt/po2lmo.py" "$po" \
+		"$i18n/luci-app-dtm-relay.$lang.lmo"
+done
+
 cat > "$stage/control/control" <<EOF
 Package: luci-app-dtm-relay
 Version: ${VERSION}-1

@@ -1,0 +1,213 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: luci-app-dtm-relay\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: es\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Soty relay"
+msgstr "Relé Soty"
+
+msgid "LAN relay and tracker for Soty."
+msgstr "Relé LAN y rastreador para Soty."
+
+msgid "Service"
+msgstr "Servicio"
+
+msgid "State"
+msgstr "Estado"
+
+msgid "Running"
+msgstr "En ejecución"
+
+msgid "Stopped"
+msgstr "Detenido"
+
+msgid "Autostart"
+msgstr "Inicio automático"
+
+msgid "Enabled"
+msgstr "Activado"
+
+msgid "Disabled"
+msgstr "Desactivado"
+
+msgid "Version"
+msgstr "Versión"
+
+msgid "Uptime"
+msgstr "Tiempo activo"
+
+msgid "Connections"
+msgstr "Conexiones"
+
+msgid "Now"
+msgstr "Ahora"
+
+msgid "Total"
+msgstr "Total"
+
+msgid "Federation links"
+msgstr "Enlaces de federación"
+
+msgid "Queue"
+msgstr "Cola"
+
+msgid "Envelopes"
+msgstr "Sobres"
+
+msgid "Peers"
+msgstr "Pares"
+
+msgid "Subscriptions"
+msgstr "Suscripciones"
+
+msgid "Process"
+msgstr "Proceso"
+
+msgid "Memory"
+msgstr "Memoria"
+
+msgid "Counters"
+msgstr "Contadores"
+
+msgid "Received"
+msgstr "Recibidos"
+
+msgid "Relayed"
+msgstr "Retransmitidos"
+
+msgid "Rejected"
+msgstr "Rechazados"
+
+msgid "Duplicates"
+msgstr "Duplicados"
+
+msgid "Backfill"
+msgstr "Relleno"
+
+msgid "Live"
+msgstr "En vivo"
+
+msgid "Start"
+msgstr "Iniciar"
+
+msgid "Stop"
+msgstr "Detener"
+
+msgid "Restart"
+msgstr "Reiniciar"
+
+msgid "Settings"
+msgstr "Ajustes"
+
+msgid "Start the relay to see metrics."
+msgstr "Inicia el relé para ver las métricas."
+
+msgid "Service action completed: %s"
+msgstr "Acción del servicio completada: %s"
+
+msgid "Service action failed: %s"
+msgstr "Error en la acción del servicio: %s"
+
+msgid "Command failed"
+msgstr "El comando falló"
+
+msgid "Relay settings"
+msgstr "Ajustes del relé"
+
+msgid "Important"
+msgstr "Importante"
+
+msgid "Back up the router before changing settings. The Ed25519 identity file is pinned by clients: never delete or replace it."
+msgstr "Haz una copia de seguridad del router antes de cambiar los ajustes. Los clientes fijan el archivo de identidad Ed25519: nunca lo borres ni lo sustituyas."
+
+msgid "Start the relay automatically when the router boots."
+msgstr "Iniciar el relé automáticamente al arrancar el router."
+
+msgid "Listen port"
+msgstr "Puerto"
+
+msgid "WebSocket port for the protocol endpoint /ws on the LAN."
+msgstr "Puerto WebSocket para /ws en la LAN."
+
+msgid "Announce URL"
+msgstr "URL anunciada"
+
+msgid "Public ws:// or wss:// URL advertised to clients. Leave empty to use the router LAN address."
+msgstr "URL ws:// o wss:// pública anunciada a los clientes. Déjala vacía para usar la dirección LAN del router."
+
+msgid "auto"
+msgstr "automático"
+
+msgid "Expected a ws:// or wss:// URL"
+msgstr "Se esperaba una URL ws:// o wss://"
+
+msgid "Identity file"
+msgstr "Archivo de identidad"
+
+msgid "Read-only. Changing or deleting this Ed25519 seed creates a new relay identity and breaks every client that pinned this relay."
+msgstr "Solo lectura. Cambiar o borrar esta semilla Ed25519 crea una nueva identidad y rompe todos los clientes que fijaron este relé."
+
+msgid "Retention, days"
+msgstr "Retención, días"
+
+msgid "How long envelopes for subscribed recipients are kept."
+msgstr "Cuánto tiempo se conservan los sobres de los destinatarios suscritos."
+
+msgid "Max connections"
+msgstr "Conexiones máximas"
+
+msgid "Simultaneous WebSocket connections. The hard ceiling is 512."
+msgstr "Conexiones WebSocket simultáneas. Límite máximo: 512."
+
+msgid "Storage"
+msgstr "Almacenamiento"
+
+msgid "RAM is recommended: router flash wears out and the queue survives a reconnect, not a reboot."
+msgstr "Se recomienda RAM: la flash del router se desgasta y la cola sobrevive a una reconexión, no a un reinicio."
+
+msgid "RAM (recommended)"
+msgstr "RAM (recomendada)"
+
+msgid "Disk (journal on USB)"
+msgstr "Disco (diario en USB)"
+
+msgid "Journal directory"
+msgstr "Directorio del diario"
+
+msgid "Only for disk storage. Use a USB mount, for example /mnt/sda1/dtm-relay."
+msgstr "Solo para almacenamiento en disco. Usa un montaje USB, por ejemplo /mnt/sda1/dtm-relay."
+
+msgid "Expected an absolute path"
+msgstr "Se esperaba una ruta absoluta"
+
+msgid "Federation"
+msgstr "Federación"
+
+msgid "Allow outbound connections to seeded internet relays. Off by default; a LAN relay needs no federation."
+msgstr "Permitir conexiones salientes a relés de internet sembrados. Desactivado por defecto; un relé LAN no necesita federación."
+
+msgid "Federation seeds"
+msgstr "Semillas de federación"
+
+msgid "Space-separated ws:// or wss:// URLs, optionally pinned with url|ed25519."
+msgstr "URL ws:// o wss:// separadas por espacios, opcionalmente fijadas con url|ed25519."
+
+msgid "Invalid seed: %s"
+msgstr "Semilla no válida: %s"
+
+msgid "Settings saved; the relay was restarted."
+msgstr "Ajustes guardados; el relé se reinició."
+
+msgid "Settings saved, but the relay did not restart: %s"
+msgstr "Ajustes guardados, pero el relé no se reinició: %s"
+
+msgid "Error"
+msgstr "Error"
+
+msgid "Load 1 min"
+msgstr "Carga (1 min)"
+
+msgid "LAN relay and tracker for Soty. The same settings are available in /etc/config/dtm_relay."
+msgstr "Relé LAN y rastreador para Soty. Los mismos ajustes están en /etc/config/dtm_relay."

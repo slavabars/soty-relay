@@ -1,0 +1,213 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: luci-app-dtm-relay\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: zh-cn\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "Soty relay"
+msgstr "Soty 中继"
+
+msgid "LAN relay and tracker for Soty."
+msgstr "Soty 的局域网中继和跟踪器。"
+
+msgid "Service"
+msgstr "服务"
+
+msgid "State"
+msgstr "状态"
+
+msgid "Running"
+msgstr "运行中"
+
+msgid "Stopped"
+msgstr "已停止"
+
+msgid "Autostart"
+msgstr "开机自启"
+
+msgid "Enabled"
+msgstr "已启用"
+
+msgid "Disabled"
+msgstr "已禁用"
+
+msgid "Version"
+msgstr "版本"
+
+msgid "Uptime"
+msgstr "运行时间"
+
+msgid "Connections"
+msgstr "连接"
+
+msgid "Now"
+msgstr "当前"
+
+msgid "Total"
+msgstr "总计"
+
+msgid "Federation links"
+msgstr "联邦连接"
+
+msgid "Queue"
+msgstr "队列"
+
+msgid "Envelopes"
+msgstr "信封"
+
+msgid "Peers"
+msgstr "节点"
+
+msgid "Subscriptions"
+msgstr "订阅"
+
+msgid "Process"
+msgstr "进程"
+
+msgid "Memory"
+msgstr "内存"
+
+msgid "Counters"
+msgstr "计数器"
+
+msgid "Received"
+msgstr "已接收"
+
+msgid "Relayed"
+msgstr "已转发"
+
+msgid "Rejected"
+msgstr "已拒绝"
+
+msgid "Duplicates"
+msgstr "重复"
+
+msgid "Backfill"
+msgstr "回填"
+
+msgid "Live"
+msgstr "实时"
+
+msgid "Start"
+msgstr "启动"
+
+msgid "Stop"
+msgstr "停止"
+
+msgid "Restart"
+msgstr "重启"
+
+msgid "Settings"
+msgstr "设置"
+
+msgid "Start the relay to see metrics."
+msgstr "启动中继以查看指标。"
+
+msgid "Service action completed: %s"
+msgstr "服务操作完成：%s"
+
+msgid "Service action failed: %s"
+msgstr "服务操作失败：%s"
+
+msgid "Command failed"
+msgstr "命令失败"
+
+msgid "Relay settings"
+msgstr "中继设置"
+
+msgid "Important"
+msgstr "重要"
+
+msgid "Back up the router before changing settings. The Ed25519 identity file is pinned by clients: never delete or replace it."
+msgstr "修改设置前请备份路由器。Ed25519 身份文件已被客户端固定：切勿删除或替换。"
+
+msgid "Start the relay automatically when the router boots."
+msgstr "路由器启动时自动启动中继。"
+
+msgid "Listen port"
+msgstr "端口"
+
+msgid "WebSocket port for the protocol endpoint /ws on the LAN."
+msgstr "局域网中 /ws 的 WebSocket 端口。"
+
+msgid "Announce URL"
+msgstr "公告 URL"
+
+msgid "Public ws:// or wss:// URL advertised to clients. Leave empty to use the router LAN address."
+msgstr "向客户端公布的公开 ws:// 或 wss:// URL。留空则使用路由器局域网地址。"
+
+msgid "auto"
+msgstr "自动"
+
+msgid "Expected a ws:// or wss:// URL"
+msgstr "需要 ws:// 或 wss:// URL"
+
+msgid "Identity file"
+msgstr "身份文件"
+
+msgid "Read-only. Changing or deleting this Ed25519 seed creates a new relay identity and breaks every client that pinned this relay."
+msgstr "只读。修改或删除此 Ed25519 种子会创建新的中继身份，并使所有固定此中继的客户端失效。"
+
+msgid "Retention, days"
+msgstr "保留天数"
+
+msgid "How long envelopes for subscribed recipients are kept."
+msgstr "订阅接收者的信封保留多长时间。"
+
+msgid "Max connections"
+msgstr "最大连接数"
+
+msgid "Simultaneous WebSocket connections. The hard ceiling is 512."
+msgstr "同时 WebSocket 连接数。硬上限为 512。"
+
+msgid "Storage"
+msgstr "存储"
+
+msgid "RAM is recommended: router flash wears out and the queue survives a reconnect, not a reboot."
+msgstr "建议使用 RAM：路由器闪存会磨损，队列能承受重连但无法承受重启。"
+
+msgid "RAM (recommended)"
+msgstr "RAM（推荐）"
+
+msgid "Disk (journal on USB)"
+msgstr "磁盘（USB 日志）"
+
+msgid "Journal directory"
+msgstr "日志目录"
+
+msgid "Only for disk storage. Use a USB mount, for example /mnt/sda1/dtm-relay."
+msgstr "仅用于磁盘存储。请使用 USB 挂载，例如 /mnt/sda1/dtm-relay。"
+
+msgid "Expected an absolute path"
+msgstr "需要绝对路径"
+
+msgid "Federation"
+msgstr "联邦"
+
+msgid "Allow outbound connections to seeded internet relays. Off by default; a LAN relay needs no federation."
+msgstr "允许向种子互联网中继发起出站连接。默认关闭；局域网中继无需联邦。"
+
+msgid "Federation seeds"
+msgstr "联邦种子"
+
+msgid "Space-separated ws:// or wss:// URLs, optionally pinned with url|ed25519."
+msgstr "以空格分隔的 ws:// 或 wss:// URL，可用 url|ed25519 固定。"
+
+msgid "Invalid seed: %s"
+msgstr "无效种子：%s"
+
+msgid "Settings saved; the relay was restarted."
+msgstr "设置已保存；中继已重启。"
+
+msgid "Settings saved, but the relay did not restart: %s"
+msgstr "设置已保存，但中继未重启：%s"
+
+msgid "Error"
+msgstr "错误"
+
+msgid "Load 1 min"
+msgstr "负载（1 分钟）"
+
+msgid "LAN relay and tracker for Soty. The same settings are available in /etc/config/dtm_relay."
+msgstr "Soty 的局域网中继和跟踪器。相同设置可在 /etc/config/dtm_relay 中找到。"

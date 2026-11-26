@@ -3,6 +3,7 @@ msgstr ""
 "Project-Id-Version: luci-app-dtm-relay\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: ru\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
 msgid "Soty relay"
 msgstr "Релей Soty"
@@ -201,3 +202,12 @@ msgstr "Настройки сохранены; релей перезапущен
 
 msgid "Settings saved, but the relay did not restart: %s"
 msgstr "Настройки сохранены, но релей не перезапустился: %s"
+
+msgid "Error"
+msgstr "Ошибка"
+
+msgid "Load 1 min"
+msgstr "Нагрузка (1 мин)"
+
+msgid "LAN relay and tracker for Soty. The same settings are available in /etc/config/dtm_relay."
+msgstr "LAN-релей и трекер Soty. Те же настройки доступны в /etc/config/dtm_relay."
