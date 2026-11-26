@@ -24,6 +24,8 @@ class HostServer {
   final HostConfig config;
   final RateLimiter _rateLimiter;
   final RateLimiter _liveLimiter;
+  final RateLimiter _globalLimiter;
+  int _insertsSinceCapCheck = 0;
   final Set<_ClientContext> _connections = {};
   final Map<String, _PeerLink> _links = {};
   HttpServer? _httpServer;
@@ -57,8 +59,10 @@ class HostServer {
     required this.config,
     required RateLimiter rateLimiter,
     required RateLimiter liveLimiter,
+    required RateLimiter globalLimiter,
   }) : _rateLimiter = rateLimiter,
-       _liveLimiter = liveLimiter;
+       _liveLimiter = liveLimiter,
+       _globalLimiter = globalLimiter;
 
   factory HostServer({
     required HostDatabase db,
@@ -78,6 +82,11 @@ class HostServer {
         limitPerWindow: config.liveRateLimitPerWindow,
         windowSeconds: config.rateWindowSeconds,
         maxKeys: config.rateLimiterMaxKeys,
+      ),
+      globalLimiter: RateLimiter(
+        limitPerWindow: config.globalRateLimitPerWindow,
+        windowSeconds: config.rateWindowSeconds,
+        maxKeys: 1,
       ),
     );
   }
@@ -115,7 +124,7 @@ class HostServer {
       unawaited(_startPeerLink(peer));
     }
     for (final member in db.federatedHosts()) {
-      unawaited(_startPeerLink(member));
+      unawaited(_startPeerLink(member, requirePublic: true));
     }
     await _prune();
   }
@@ -298,10 +307,14 @@ class HostServer {
     try {
       await for (final frame in ws) {
         if (ctx.closed) break;
+        // Check the raw frame before allocating a decoded string: a hostile
+        // peer must not be able to make us UTF-8-decode megabytes first.
         final String text;
         if (frame is String) {
+          if (frame.length > limits.maxFrameBytes) break;
           text = frame;
         } else if (frame is List<int>) {
+          if (frame.length > limits.maxFrameBytes) break;
           text = utf8.decode(frame);
         } else {
           break;
@@ -335,6 +348,9 @@ class HostServer {
           :final myAddrs,
           :final announce,
         ):
+        if (myPeerId.isEmpty || myPeerId.length > limits.maxPeerIdLength) {
+          throw const FormatException('HELLO peer id is out of bounds');
+        }
         ctx.peerId = myPeerId;
         ctx.identity = myPeerId;
         ctx.capabilities.addAll(capabilities);
@@ -436,9 +452,11 @@ class HostServer {
         );
       case WantMessage(:final since):
         final now = DateTime.now().toUtc().millisecondsSinceEpoch;
+        // The peer parser caps HAVE at maxGossipItems; a larger answer would
+        // be dropped as a malformed frame and break federation on a busy host.
         final ids = db.idsSince(
           scanWindowStart(since, now),
-          limit: limits.hostMaxSyncEnvelopes,
+          limit: limits.maxGossipItems,
         );
         _send(ctx, HaveMessage(ids: ids));
       case HaveMessage(:final ids):
@@ -546,14 +564,41 @@ class HostServer {
     required String source,
     required int hops,
   }) async {
+    // Global backstop: per-sender buckets are defeated by generating a fresh
+    // Ed25519 key per envelope, so aggregate stored ingress needs its own cap.
+    if (!_globalLimiter.allow('stored')) {
+      _rejectedTotal++;
+      return false;
+    }
     if (!await _verifyEnvelope(envelope)) return false;
     final inserted = db.insertIfAbsent(envelope, source: source, hops: hops);
     if (inserted) {
       _receivedTotal++;
+      _enforceStorageCapsMaybe();
     } else {
       _duplicateTotal++;
     }
     return inserted;
+  }
+
+  /// Check the count cap on every insert (cheap in memory) and the byte cap
+  /// periodically; eviction is oldest-first and never signs a prune root,
+  /// because a cap drop is a cache eviction, not a retention promise.
+  void _enforceStorageCapsMaybe() {
+    _insertsSinceCapCheck++;
+    if (_insertsSinceCapCheck % 32 != 0) return;
+    _enforceStorageCaps();
+  }
+
+  void _enforceStorageCaps() {
+    final evicted = db.evictOldestBeyond(
+      maxEnvelopes: config.maxStoredEnvelopes,
+      maxBytes: config.maxStoredBytes,
+    );
+    if (evicted > 0) {
+      _log('storage cap: evicted=$evicted '
+          'envelopes=${db.envelopeCount()}');
+    }
   }
 
   /// Forwards a live-only envelope to currently connected subscribers of its
@@ -624,11 +669,29 @@ class HostServer {
       final pinned = link.endpoint.edPubKey ?? '';
       return pinned.isEmpty || pinned == claimedKey;
     }
-    if (_networkMembers().any((e) => e.edPubKey == claimedKey)) return true;
+    // Inbound federation needs an operator decision. A claimed key is only a
+    // string: knowing a public host key (including this relay's own key from
+    // WELCOME, /directory or an invite) must never be enough.
     if (announce == null || announce.isEmpty) return false;
-    final edges = db.federatedHosts().where((e) => e.addr == announce);
-    if (edges.any((e) => e.edPubKey == claimedKey)) return true;
-    return _announceMatchesRemote(announce, ctx.remoteAddress);
+    final known = <HostEndpoint>[
+      ...config.federatedPeers,
+      ...db.federatedHosts(),
+    ].where((e) => e.addr == announce && e.edPubKey == claimedKey);
+    if (known.isNotEmpty) {
+      // The operator pinned this exact endpoint/key pair (or a trusted member
+      // introduced it). It may be a LAN address, so no public-address check.
+      return _announceMatchesRemote(announce, ctx.remoteAddress);
+    }
+    if (!config.allowInboundFederation) return false;
+    // Open meshes are opt-in. Require the announced endpoint to resolve to
+    // the socket source and, by default, reject loopback/private targets so
+    // a reverse proxy (where every client appears as 127.0.0.1) cannot be
+    // spoofed into granting federation.
+    return _announceMatchesRemote(
+      announce,
+      ctx.remoteAddress,
+      requirePublic: !config.allowPrivateFederation,
+    );
   }
 
   /// Whether the host part of [announce] resolves to the address the socket
@@ -636,9 +699,11 @@ class HostServer {
   /// cached briefly so a reconnecting host cannot hammer a resolver.
   Future<bool> _announceMatchesRemote(
     String announce,
-    InternetAddress? remote,
-  ) async {
+    InternetAddress? remote, {
+    bool requirePublic = false,
+  }) async {
     if (remote == null) return false;
+    if (requirePublic && !_isPublicAddress(remote)) return false;
     final uri = Uri.tryParse(announce);
     if (uri == null) return false;
     if (uri.scheme != 'ws' && uri.scheme != 'wss') return false;
@@ -648,6 +713,10 @@ class HostServer {
     final cached = _addrCheckCache[uri.host];
     final now = DateTime.now();
     if (cached != null && now.isBefore(cached.expires)) {
+      if (requirePublic &&
+          !cached.addresses.every(_isPublicAddress)) {
+        return false;
+      }
       return _sameAddress(cached.addresses, remote);
     }
     List<InternetAddress> addresses;
@@ -665,7 +734,48 @@ class HostServer {
     if (_addrCheckCache.length > limits.maxFederatedHosts * 4) {
       _addrCheckCache.remove(_addrCheckCache.keys.first);
     }
+    if (requirePublic && !addresses.every(_isPublicAddress)) return false;
     return _sameAddress(addresses, remote);
+  }
+
+  /// Whether [address] is globally routable. Used to keep opt-in inbound
+  /// federation from being spoofed through loopback or a private network.
+  static bool _isPublicAddress(InternetAddress address) {
+    final raw = address.rawAddress;
+    if (raw.length == 4) {
+      final a = raw[0];
+      final b = raw[1];
+      if (a == 0 || a == 10 || a == 127) return false;
+      if (a == 169 && b == 254) return false;
+      if (a == 172 && b >= 16 && b <= 31) return false;
+      if (a == 192 && b == 168) return false;
+      if (a == 100 && b >= 64 && b <= 127) return false;
+      if (a >= 224) return false;
+      return true;
+    }
+    if (raw.length == 16) {
+      if (raw.every((b) => b == 0)) return false;
+      if (raw.sublist(0, 15).every((b) => b == 0) && raw[15] == 1) {
+        return false; // ::1 loopback
+      }
+      if (raw[0] == 0xfe && (raw[1] & 0xc0) == 0x80) return false;
+      if ((raw[0] & 0xfe) == 0xfc) return false;
+      if (raw[0] == 0xff) return false;
+      final v4Mapped = raw.sublist(0, 10).every((b) => b == 0) &&
+          raw[10] == 0xff && raw[11] == 0xff;
+      if (v4Mapped) {
+        final a = raw[12];
+        final b = raw[13];
+        if (a == 0 || a == 10 || a == 127) return false;
+        if (a == 169 && b == 254) return false;
+        if (a == 172 && b >= 16 && b <= 31) return false;
+        if (a == 192 && b == 168) return false;
+        if (a == 100 && b >= 64 && b <= 127) return false;
+        if (a >= 224) return false;
+      }
+      return true;
+    }
+    return false;
   }
 
   static bool _sameAddress(
@@ -758,6 +868,7 @@ class HostServer {
     final remembered = db.rememberedSubscriptions(now, config.retentionMs);
     await db.pruneOlderThan(now - config.retentionMs, key);
     await db.pruneRelayWindow(now, config.relayWindowMs, remembered, key);
+    _enforceStorageCaps();
     _log(
       'prune: connections=${_connections.length} '
       'links=${_links.length} peers=${db.peerCount()} '
@@ -781,15 +892,46 @@ class HostServer {
     }
   }
 
-  Future<void> _startPeerLink(HostEndpoint endpoint) async {
+  Future<void> _startPeerLink(
+    HostEndpoint endpoint, {
+    bool requirePublic = false,
+  }) async {
     if (_links.containsKey(endpoint.addr)) return;
-    final link = _PeerLink(endpoint: endpoint);
+    if (requirePublic && !await _endpointIsPublic(endpoint.addr)) {
+      return;
+    }
+    final link = _PeerLink(endpoint: endpoint, requirePublic: requirePublic);
     _links[endpoint.addr] = link;
     await _connectPeer(link);
   }
 
+  /// Whether [addr] is a public ws/wss endpoint. Wire-supplied members must
+  /// pass this before the relay dials them, so a compromised federated peer
+  /// cannot turn the relay into an SSRF probe of its own LAN or loopback.
+  Future<bool> _endpointIsPublic(String addr) async {
+    if (config.allowPrivateFederation) return true;
+    final uri = Uri.tryParse(addr);
+    if (uri == null || (uri.scheme != 'ws' && uri.scheme != 'wss')) {
+      return false;
+    }
+    if (uri.host.isEmpty || addr.length > limits.maxAddrLength) return false;
+    final literal = InternetAddress.tryParse(uri.host);
+    if (literal != null) return _isPublicAddress(literal);
+    try {
+      final addresses = await InternetAddress.lookup(uri.host).timeout(
+        const Duration(seconds: 5),
+      );
+      return addresses.isNotEmpty && addresses.every(_isPublicAddress);
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> _connectPeer(_PeerLink link) async {
     if (link.closed) return;
+    if (link.requirePublic && !await _endpointIsPublic(link.endpoint.addr)) {
+      return;
+    }
     try {
       final ws = await WebSocket.connect(
         link.endpoint.addr,
@@ -851,12 +993,16 @@ class HostServer {
   void _adoptNetworkMember(HostEndpoint endpoint) {
     final self = _selfEndpoint;
     if (self != null && endpoint.addr == self.addr) return;
+    // Persist/dial only after a public-address check performed by
+    // `_startPeerLink`; private targets would be an SSRF primitive. Keep the
+    // adoption optimistic for the operator's own private LAN only when that
+    // was explicitly enabled.
     db.rememberFederatedHost(
       endpoint,
       DateTime.now().toUtc().millisecondsSinceEpoch,
     );
     if (_links.containsKey(endpoint.addr)) return;
-    unawaited(_startPeerLink(endpoint));
+    unawaited(_startPeerLink(endpoint, requirePublic: true));
   }
 
   void _scheduleReconnect(_PeerLink link) {
@@ -990,13 +1136,14 @@ class _AddrCheck {
 
 class _PeerLink {
   final HostEndpoint endpoint;
+  final bool requirePublic;
   String? identity;
   WebSocket? ws;
   int attempt = 0;
   bool closed = false;
   Timer? backoff;
 
-  _PeerLink({required this.endpoint});
+  _PeerLink({required this.endpoint, this.requirePublic = false});
 
   void wsGone() {
     ws = null;

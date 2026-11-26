@@ -14,7 +14,12 @@ import 'package:dtm_host/host_server.dart';
 /// HostServer backed by a fresh in-memory db on an ephemeral loopback port.
 Future<StartedServer> startServer({HostConfig? config}) async {
   final resolved = config ??
-      const HostConfig(listenAddress: '127.0.0.1', port: 0);
+      const HostConfig(
+        listenAddress: '127.0.0.1',
+        port: 0,
+        allowInboundFederation: true,
+        allowPrivateFederation: true,
+      );
   final db = HostDatabase.openInMemory();
   final key = await HostKey.generate();
   final server = HostServer(db: db, key: key, config: resolved);

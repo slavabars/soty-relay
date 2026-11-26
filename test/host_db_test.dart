@@ -356,4 +356,38 @@ void main() {
       expect(db.rememberedSubscriptions(1010, 1000), {'k2', 'k3', 'k4'});
     });
   });
+  test('evictOldestBeyond drops the oldest rows and keeps the newest',
+      () async {
+    final sender = await DtmKeyPair.generate();
+    final recipient = await DtmKeyPair.generate();
+    final rx = await recipient.x25519PublicKeyHex;
+    for (var i = 0; i < 6; i++) {
+      final envelope = await stamp(sender, rx, 'm$i', 1000 + i);
+      db.insertIfAbsent(envelope);
+    }
+
+    final removed = db.evictOldestBeyond(maxEnvelopes: 2, maxBytes: 0);
+    expect(removed, 4);
+    expect(db.envelopeCount(), 2);
+    final left = db.idsSince(0);
+    expect(left, hasLength(2));
+    final stamps = left
+        .map((id) => db.envelopeById(id)!.timestamp)
+        .toList(growable: false);
+    expect(stamps, [1004, 1005]);
+  });
+
+  test('a file-backed host.db is private and its directory is 0700', () async {
+    final dir = Directory.systemTemp.createTempSync('host_db_perms');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final path = '${dir.path}/nested/host.db';
+    final opened = await HostDatabase.open(path);
+    addTearDown(opened.dispose);
+
+    final fileMode = File(path).statSync().mode & 0x1FF;
+    final dirMode = Directory('${dir.path}/nested').statSync().mode & 0x1FF;
+    expect(fileMode, 0x180, reason: 'host.db must be 0600');
+    expect(dirMode, 0x1C0, reason: 'its directory must be 0700');
+  });
+
 }

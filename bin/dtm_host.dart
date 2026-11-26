@@ -27,6 +27,14 @@ Options:
                      identity. Members the network introduces are kept too.
   --seed <spec>      alias for --peer: the address of an already-running
                      member to join the network through.
+  --allow-inbound-federation
+                     accept a relay role from an inbound peer that is not a
+                     configured/introduced member. Off by default; the peer
+                     must still announce an endpoint that resolves to its
+                     socket source.
+  --allow-private-federation
+                     allow the inbound-federation address proof to use
+                     loopback/private addresses (tests and trusted LANs only).
   --help             show this message
 ''';
 
@@ -52,6 +60,8 @@ Future<void> main(List<String> args) async {
       port: cli.port,
       announceUrl: cli.announce,
       federatedPeers: peers,
+      allowInboundFederation: cli.allowInboundFederation,
+      allowPrivateFederation: cli.allowPrivateFederation,
     ),
   );
   final pub = await key.hexPub;
@@ -102,6 +112,8 @@ class _Args {
   final int port;
   final String? announce;
   final List<String> peers;
+  final bool allowInboundFederation;
+  final bool allowPrivateFederation;
 
   const _Args({
     required this.dbPath,
@@ -109,6 +121,8 @@ class _Args {
     required this.port,
     required this.announce,
     required this.peers,
+    required this.allowInboundFederation,
+    required this.allowPrivateFederation,
   });
 }
 
@@ -118,11 +132,23 @@ _Args? _parseArgs(List<String> args) {
   var port = 3000;
   String? announce;
   final peers = <String>[];
+  var allowInboundFederation = false;
+  var allowPrivateFederation = false;
   var i = 0;
   while (i < args.length) {
     final flag = args[i];
     String? value;
     if (flag == '--help' || flag == '-h') return null;
+    if (flag == '--allow-inbound-federation' ||
+        flag == '--allow-private-federation') {
+      i++;
+      if (flag == '--allow-inbound-federation') {
+        allowInboundFederation = true;
+      } else {
+        allowPrivateFederation = true;
+      }
+      continue;
+    }
     if (_hasValue(args, i)) {
       value = args[i + 1];
       i += 2;
@@ -154,6 +180,8 @@ _Args? _parseArgs(List<String> args) {
     port: port,
     announce: announce,
     peers: peers,
+    allowInboundFederation: allowInboundFederation,
+    allowPrivateFederation: allowPrivateFederation,
   );
 }
 

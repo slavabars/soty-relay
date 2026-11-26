@@ -2,8 +2,10 @@ import 'package:dtm_app/core/host/host_link.dart' show HostEndpoint;
 import 'package:dtm_app/core/security_limits.dart'
     show hostBackfillMaxRounds, hostGossipMaxHops, hostRateLimitLivePerWindow,
         hostRateLimitPerWindow, hostRateWindowSeconds, hostRetentionMs,
-        hostRelayWindowMs, hostTrackerPeerTtlMs, maxHostConnections,
-        maxRateLimiterKeys, maxTrackerPeers;
+        hostGlobalRateLimitPerWindow, hostRelayWindowMs,
+        hostServerMaxStoredBytes, hostServerMaxStoredEnvelopes,
+        hostTrackerPeerTtlMs, maxHostConnections, maxRateLimiterKeys,
+        maxTrackerPeers;
 
 /// Operator knobs for a relay host. [relayWindowMs]/[retentionMs] mirror
 /// [hostRelayWindowMs]/[hostRetentionMs]; every other knob has a sane default
@@ -20,6 +22,28 @@ class HostConfig {
   /// Peer hosts to join (explicit seed list; the network keeps itself
   /// discovered from here on, see `NetworkMessage`).
   final List<HostEndpoint> federatedPeers;
+
+  /// Whether a host that this process did not dial may become a federated
+  /// relay. Off by default: federation must be seeded by the operator
+  /// (`--peer`) or introduced by an already-trusted member. When enabled, an
+  /// unknown peer still has to prove that the announced endpoint resolves to
+  /// its socket source, and (unless [allowPrivateFederation]) that endpoint
+  /// must be publicly routable.
+  final bool allowInboundFederation;
+
+  /// Allow the address proof to use loopback/private endpoints. Only tests
+  /// and explicitly trusted LAN meshes should set this; behind a reverse
+  /// proxy every client appears to come from loopback.
+  final bool allowPrivateFederation;
+
+  /// Hard storage caps, enforced oldest-first. The relay must never be
+  /// fillable by unauthenticated publishers.
+  final int maxStoredEnvelopes;
+  final int maxStoredBytes;
+
+  /// Aggregate stored-envelope budget per window across all senders, the
+  /// backstop against fresh-key rotation.
+  final int globalRateLimitPerWindow;
 
   /// Relay window for envelopes whose recipient is not subscribed here.
   final int relayWindowMs;
@@ -63,6 +87,11 @@ class HostConfig {
     this.port = 3000,
     this.announceUrl,
     this.federatedPeers = const [],
+    this.allowInboundFederation = false,
+    this.allowPrivateFederation = false,
+    this.maxStoredEnvelopes = hostServerMaxStoredEnvelopes,
+    this.maxStoredBytes = hostServerMaxStoredBytes,
+    this.globalRateLimitPerWindow = hostGlobalRateLimitPerWindow,
     this.relayWindowMs = hostRelayWindowMs,
     this.retentionMs = hostRetentionMs,
     this.maxGossipHops = hostGossipMaxHops,

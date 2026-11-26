@@ -1002,6 +1002,38 @@ func TestInboundFederationClaimIsRejected(t *testing.T) {
 	})
 }
 
+func TestWantAnswerStaysWithinGossipCap(t *testing.T) {
+	s := startTestServer(t, nil)
+	now := nowMs()
+	for i := 0; i < limits.MaxGossipItems+20; i++ {
+		env := &wire.Envelope{
+			ID:              fmt.Sprintf("%064x", i),
+			SenderPubKey:    strings.Repeat("a", 64),
+			RecipientPubKey: strings.Repeat("b", 64),
+			Timestamp:       now - 1000 + int64(i),
+			Ciphertext:      "AA==",
+			EphemeralPubKey: strings.Repeat("c", 64),
+			Signature:       strings.Repeat("d", 128),
+		}
+		s.store.Insert(env, "publish", 0)
+	}
+	c := dial(t, s)
+	c.send(&wire.Hello{MyPeerID: "want"})
+	c.waitFor(func(m wire.Message) bool {
+		_, ok := m.(*wire.Welcome)
+		return ok
+	}, 2*time.Second)
+	c.send(&wire.Want{Since: 0})
+	have := c.waitFor(func(m wire.Message) bool {
+		_, ok := m.(*wire.Have)
+		return ok
+	}, 2*time.Second).(*wire.Have)
+	if len(have.IDs) > limits.MaxGossipItems {
+		t.Fatalf("HAVE has %d ids, cap %d", len(have.IDs),
+			limits.MaxGossipItems)
+	}
+}
+
 func TestRateLimit(t *testing.T) {
 	s := startTestServer(t, func(c *Config) {
 		c.RateLimitPerWindow = 2

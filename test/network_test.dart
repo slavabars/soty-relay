@@ -36,6 +36,8 @@ void main() {
       config: HostConfig(
         listenAddress: '127.0.0.1',
         port: 0,
+        allowInboundFederation: true,
+        allowPrivateFederation: true,
         federatedPeers: [
           HostEndpoint(addr: 'ws://127.0.0.1:${a.server.boundPort}/ws'),
         ],
@@ -59,6 +61,8 @@ void main() {
       config: HostConfig(
         listenAddress: '127.0.0.1',
         port: 0,
+        allowInboundFederation: true,
+        allowPrivateFederation: true,
         federatedPeers: [
           HostEndpoint(addr: 'ws://127.0.0.1:${a.server.boundPort}/ws'),
         ],
@@ -68,6 +72,8 @@ void main() {
       config: HostConfig(
         listenAddress: '127.0.0.1',
         port: 0,
+        allowInboundFederation: true,
+        allowPrivateFederation: true,
         federationSyncInterval: const Duration(milliseconds: 200),
         federatedPeers: [
           HostEndpoint(addr: 'ws://127.0.0.1:${a.server.boundPort}/ws'),
@@ -93,6 +99,8 @@ void main() {
       config: HostConfig(
         listenAddress: '127.0.0.1',
         port: 0,
+        allowInboundFederation: true,
+        allowPrivateFederation: true,
         federatedPeers: [
           HostEndpoint(addr: 'ws://127.0.0.1:${a.server.boundPort}/ws'),
         ],
@@ -102,6 +110,8 @@ void main() {
       config: HostConfig(
         listenAddress: '127.0.0.1',
         port: 0,
+        allowInboundFederation: true,
+        allowPrivateFederation: true,
         federationSyncInterval: const Duration(milliseconds: 200),
         federatedPeers: [
           HostEndpoint(addr: 'ws://127.0.0.1:${a.server.boundPort}/ws'),

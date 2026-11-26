@@ -10,6 +10,7 @@ dependencies:
   cryptography: ^2.7.0
   dtm_app:
     path: ../app-src
+  ffi: ^2.2.0
   sqlite3: ^2.4.0
 
 dev_dependencies:

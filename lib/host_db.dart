@@ -8,6 +8,7 @@ import 'package:dtm_app/core/security_limits.dart'
 import 'package:dtm_app/core/storage/merkle.dart' show merkleRoot;
 import 'package:dtm_app/core/sync/gossip_message.dart' show PeerRef;
 import 'package:dtm_app/models/envelope.dart';
+import 'package:ffi/ffi.dart';
 import 'package:sqlite3/open.dart' as open_lib;
 import 'package:sqlite3/sqlite3.dart' as sqlite3_pkg;
 
@@ -31,11 +32,45 @@ class HostDatabase {
 
   static Future<HostDatabase> open(String path) async {
     _resolveSqlite3();
-    File(path).parent.createSync(recursive: true);
+    final directory = File(path).parent;
+    directory.createSync(recursive: true);
+    // `host.db` holds `host_state.ed_seed`, the relay's Ed25519 identity, and
+    // every stored envelope. On a shared VPS another local user must not be
+    // able to read it: restrict the directory and file before/after open.
+    _chmod(directory.path, 0x1C0); // 0700
     final db = sqlite3_pkg.sqlite3.open(path);
+    _chmod(path, 0x180); // 0600
     final hostDb = HostDatabase._(db, path);
     hostDb._ensureSchema();
+    _chmod(path, 0x180);
     return hostDb;
+  }
+
+  /// Best-effort POSIX `chmod` through libc. The host runs on Linux; on a
+  /// platform without the symbol the call is a no-op and the operator's
+  /// service permissions remain the last line of defence.
+  static void _chmod(String path, int mode) {
+    if (Platform.isWindows) return;
+    int Function(Pointer<Utf8>, int)? fn;
+    try {
+      fn = DynamicLibrary.process()
+          .lookupFunction<Int32 Function(Pointer<Utf8>, Uint32),
+              int Function(Pointer<Utf8>, int)>('chmod');
+    } catch (_) {
+      try {
+        fn = DynamicLibrary.open('libc.so.6')
+            .lookupFunction<Int32 Function(Pointer<Utf8>, Uint32),
+                int Function(Pointer<Utf8>, int)>('chmod');
+      } catch (_) {
+        return;
+      }
+    }
+    final native = path.toNativeUtf8();
+    try {
+      fn(native, mode);
+    } finally {
+      calloc.free(native);
+    }
   }
 
   /// Size of the database file on disk, 0 for an in-memory database.
@@ -480,18 +515,60 @@ class HostDatabase {
       'VALUES (?, ?, ?, ?, ?)',
       [cutoff, root, ids.length, pub, signature],
     );
-    final placeholders = List<String>.filled(ids.length, '?').join(', ');
-    _db.execute(
-      'DELETE FROM messages WHERE id IN ($placeholders) AND '
-      'timestamp < ?',
-      [...ids, cutoff],
-    );
+    // SQLite builds cap bound variables (often 999). A full 30-day prune can
+    // exceed that, and one failed statement would roll back the whole batch.
+    for (var i = 0; i < ids.length; i += 400) {
+      final chunk = ids.sublist(
+        i,
+        i + 400 > ids.length ? ids.length : i + 400,
+      );
+      final placeholders = List<String>.filled(chunk.length, '?').join(', ');
+      _db.execute(
+        'DELETE FROM messages WHERE id IN ($placeholders) AND '
+        'timestamp < ?',
+        [...chunk, cutoff],
+      );
+    }
     return PrunedHostBatch(
       cutoffTs: cutoff,
       count: ids.length,
       merkleRoot: root,
       signature: signature,
     );
+  }
+
+  /// Oldest-first cache eviction when the store exceeds [maxEnvelopes] or
+  /// [maxBytes] (sum of stored ciphertext text, a close upper bound on the
+  /// row payload). Returns the number of rows dropped. No prune root is
+  /// written: a cap eviction is not a retention promise.
+  int evictOldestBeyond({
+    required int maxEnvelopes,
+    required int maxBytes,
+  }) {
+    if (maxEnvelopes <= 0 && maxBytes <= 0) return 0;
+    var deleted = 0;
+    for (var round = 0; round < 10000; round++) {
+      final row = _db.select(
+        'SELECT COUNT(*) AS c, '
+        'COALESCE(SUM(length(ciphertext)), 0) AS b FROM messages',
+      ).first;
+      final count = row['c'] as int;
+      final bytes = row['b'] as int;
+      final overCount = maxEnvelopes > 0 && count > maxEnvelopes;
+      final overBytes = maxBytes > 0 && bytes > maxBytes;
+      if (!overCount && !overBytes) break;
+      final excess = overCount ? count - maxEnvelopes : 0;
+      final batch = excess > 500 ? 500 : (excess > 0 ? excess : 500);
+      _db.execute(
+        'DELETE FROM messages WHERE id IN ('
+        'SELECT id FROM messages ORDER BY timestamp ASC, id ASC LIMIT ?)',
+        [batch],
+      );
+      final removed = _db.updatedRows;
+      deleted += removed;
+      if (removed == 0) break;
+    }
+    return deleted;
   }
 
   List<String> _idsOlderThan(int cutoff) {

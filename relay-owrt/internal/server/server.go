@@ -534,8 +534,10 @@ func (s *Server) dispatch(c *client, msg wire.Message) error {
 		return nil
 	case *wire.Want:
 		now := nowMs()
+		// HAVE is bounded by the same maxGossipItems the peer parser
+		// enforces; a 4096-id answer would be rejected as a malformed frame.
 		ids := s.store.IDsSince(scanWindowStart(m.Since, now),
-			limits.HostMaxSyncEnvelopes)
+			limits.MaxGossipItems)
 		c.send(&wire.Have{IDs: ids})
 		return nil
 	case *wire.Have:

@@ -713,8 +713,70 @@ void main() {
     }
     await server.dispose();
   });
-}
+  test('a known seed key alone cannot federate inbound', () async {
+    final seedKey = _hex32('a');
+    final server = await _startServer(
+      config: HostConfig(
+        listenAddress: '127.0.0.1',
+        port: 0,
+        federatedPeers: [
+          HostEndpoint(addr: 'ws://127.0.0.1:1/ws', edPubKey: seedKey),
+        ],
+      ),
+    );
+    final recipient = await _recipientKey();
+    final envelope = await _envelopeFor(recipient);
+    server.db.insertIfAbsent(envelope);
 
+    final client = await _connect(server);
+    await client.send(
+      HelloMessage(
+        myPeerId: seedKey,
+        capabilities: const ['dtm-host', 'dtm-net'],
+        announce: 'ws://203.0.113.9:3100/ws',
+      ),
+    );
+    await client.waitFor<WelcomeMessage>();
+    await client.send(GetMessage(ids: [envelope.id]));
+    final answer = await client.waitFor<EnvelopesMessage>();
+    expect(answer.envelopes, isEmpty);
+
+    await client.close();
+    await server.dispose();
+  });
+
+  test('WANT answer stays within the gossip list cap', () async {
+    final server = await _startServer();
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final total = limits.maxGossipItems + 20;
+    for (var i = 0; i < total; i++) {
+      server.db.insertIfAbsent(
+        Envelope(
+          id: i.toRadixString(16).padLeft(64, '0'),
+          senderPubKey: _hex32('a'),
+          recipientPubKey: _hex32('b'),
+          timestamp: now - 1000 + i,
+          ciphertext: 'AA==',
+          ephemeralPubKey: _hex32('c'),
+          signature: _hex32('d'),
+        ),
+      );
+    }
+
+    final client = await _connect(server);
+    await client.send(const HelloMessage(myPeerId: 'want'));
+    await client.send(const WantMessage(since: 0));
+    final answer = await client.waitFor<HaveMessage>();
+    expect(
+      answer.ids.length,
+      lessThanOrEqualTo(limits.maxGossipItems),
+      reason: 'a larger HAVE is rejected by the client parser',
+    );
+
+    await client.close();
+    await server.dispose();
+  });
+}
 String _hex32(String fill) => List.filled(64, fill).join();
 
 /// A distinct valid 32-byte key per index, so N clients mean N online keys.
