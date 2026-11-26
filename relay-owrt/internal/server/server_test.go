@@ -25,8 +25,6 @@ import (
 	"github.com/slavabars/soty-relay/relay-owrt/internal/wire"
 )
 
-const testSeed = "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20"
-
 func startTestServer(t *testing.T, mutate func(*Config)) *Server {
 	t.Helper()
 	cfg := DefaultConfig()
@@ -42,7 +40,7 @@ func startTestServer(t *testing.T, mutate func(*Config)) *Server {
 	if err != nil {
 		t.Fatal(err)
 	}
-	id, err := identity.FromSeedHex(testSeed)
+	id, err := identity.Generate()
 	if err != nil {
 		t.Fatal(err)
 	}

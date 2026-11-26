@@ -6,18 +6,17 @@ import (
 	"testing"
 )
 
-// The seed and public key come from the same vector the wire tests use, so a
-// seed written by dtm_host resolves to the same pinned identity here.
-const vectorSeed = "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20"
-const vectorPub = "79b5562e8fe654f94078b112e8a98ba7901f853ae695bed7e0e3910bad049664"
-
-func TestFromSeedHexMatchesDart(t *testing.T) {
-	id, err := FromSeedHex(vectorSeed)
+func TestFromSeedHexRoundTrip(t *testing.T) {
+	generated, err := Generate()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if id.PubHex() != vectorPub {
-		t.Fatalf("pub=%s want %s", id.PubHex(), vectorPub)
+	id, err := FromSeedHex(generated.seedHex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if id.PubHex() != generated.PubHex() {
+		t.Fatalf("pub=%s want %s", id.PubHex(), generated.PubHex())
 	}
 	if len(id.Sign([]byte("x"))) != 128 {
 		t.Fatal("signature is not 64-byte hex")

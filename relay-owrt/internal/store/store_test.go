@@ -33,8 +33,7 @@ func writeRawJournal(dir, content string) error {
 
 func testIdentity(t *testing.T) *identity.Identity {
 	t.Helper()
-	id, err := identity.FromSeedHex(
-		"0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20")
+	id, err := identity.Generate()
 	if err != nil {
 		t.Fatal(err)
 	}

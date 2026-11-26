@@ -31,12 +31,26 @@ func FromSeedHex(seedHex string) (*Identity, error) {
 	if err != nil || len(raw) != seedBytes {
 		return nil, errors.New("identity seed must be 32 bytes of hex")
 	}
+	return newFromSeed(raw), nil
+}
+
+// Generate returns a fresh random identity. Tests use it instead of carrying a
+// fixed seed in the published source.
+func Generate() (*Identity, error) {
+	seed := make([]byte, seedBytes)
+	if _, err := rand.Read(seed); err != nil {
+		return nil, fmt.Errorf("generate identity: %w", err)
+	}
+	return newFromSeed(seed), nil
+}
+
+func newFromSeed(raw []byte) *Identity {
 	priv := ed25519.NewKeyFromSeed(raw)
 	return &Identity{
 		private: priv,
 		seedHex: hex.EncodeToString(raw),
 		pubHex:  hex.EncodeToString(priv.Public().(ed25519.PublicKey)),
-	}, nil
+	}
 }
 
 // LoadOrCreate reads [path] or creates it with a fresh seed. The directory is
@@ -58,15 +72,10 @@ func LoadOrCreate(path string) (*Identity, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return nil, fmt.Errorf("create identity directory: %w", err)
 	}
-	seed := make([]byte, seedBytes)
-	if _, err := rand.Read(seed); err != nil {
-		return nil, fmt.Errorf("generate identity: %w", err)
+	id, err := Generate()
+	if err != nil {
+		return nil, err
 	}
-	id := &Identity{
-		private: ed25519.NewKeyFromSeed(seed),
-		seedHex: hex.EncodeToString(seed),
-	}
-	id.pubHex = hex.EncodeToString(id.private.Public().(ed25519.PublicKey))
 	if err := os.WriteFile(path, []byte(id.seedHex+"\n"), 0o600); err != nil {
 		return nil, fmt.Errorf("write identity: %w", err)
 	}
